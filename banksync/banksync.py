@@ -29,7 +29,7 @@ defaultSyncPointBranchName = "syncPoint"
 # Parse the arguments
 # --------------------------------------------------------------------------------------------------------------------------
 
-sync_commands = ['sync', 'createSyncPoint', 'generateSyncFile', 'bisect']
+sync_commands = ['sync', 'createSyncPoint', 'generateSyncFile', 'bisect', 'clone']
 git_commands = ['gitclone', 'gitreset', 'gitlog', 'gitstatus', 'gitbranch', 'gitcheckout', 'gitcommit', 'gitdiff', 'gitfecth', 'gitpush', 'gitpull', 'gitprune', 'gitgc', 'gitfsck']
 commands = sync_commands + git_commands
 matchingOpts = ['shaOnly', 'timestamp', 'closetimestamp']
@@ -280,6 +280,47 @@ def commandBisect():
 
 
 # --------------------------------------------------------------------------------------------------------------------------
+# command "clone"
+# --------------------------------------------------------------------------------------------------------------------------
+
+def commandClone():
+    checkForSyncRepo(syncFilePath)
+    syncDict = loadSyncFileAsDict(syncFilePath)
+    anyFailures = False
+
+    opts = {'captureStdOutStdErr':False, 'verbosity':verbosity}
+    for repoName in syncDict:
+        repoInfo = syncDict[repoName]
+        absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
+        repoString = paddedRepoName(repoName,syncDict)
+        greenRepoString = colored(repoString, 'green')
+        redRepoString   = colored(repoString, 'red')
+        if not "cloneURL" in repoInfo:
+            anyFailures = True
+            printWithVars2("{repoString}: there is no cloneURL for this repo", "red")
+            continue   
+        cloneURL = repoInfo["cloneURL"]
+        name = os.path.basename(absRepoPath)
+        dir  = os.path.dirname(absRepoPath)
+        opts['cwd'] = dir
+        execute3("mkdir -p {dir}")
+        res = gitCommand("git clone {cloneURL} {name}", 3, **opts)
+        if res['code'] == 0:
+            printWithVars2("{greenRepoString}: cloned repo to {absRepoPath}")
+        else:
+            anyFailures = True
+            printWithVars2("{redRepoString}: error cloning repo to {absRepoPath}")
+
+    if anyFailures:
+        print colored("failure! not all repos cloned.", 'red')
+        sys.exit(1)
+
+    print colored("success! all repos cloned.", 'green')
+    commandSync()
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------
 # a git command
 # --------------------------------------------------------------------------------------------------------------------------
 
@@ -313,6 +354,8 @@ def dispatchCommand(command):
     #from pudb import set_trace; set_trace()
     if command == "sync":
         commandSync()
+    if command == "clone":
+        commandClone()
     if command == "createSyncPoint":
         commandSyncCreateSyncPoint()
     if command == "generateSyncFile":
