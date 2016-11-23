@@ -1,0 +1,171 @@
+# --------------------------------------------------------------------------------------------------------------------------
+# Test sysexecute execute
+# --------------------------------------------------------------------------------------------------------------------------
+
+import sysexecute
+>>> import sys, os, time
+>>> from sysexecute import *
+>>> sys.path.append(os.path.abspath('.'))
+>>> sys.path.append(os.path.abspath('..'))
+>>> from banksync import *
+
+>>> set_defaults('verbosity', 2)
+>>> set_defaults('captureStdOutStdErr', True)
+
+# Creating Repos
+
+>>> ans = execute4('rm -rf repoFish')
+>>> ans = execute4('mkdir repoFish')
+>>> ans = execute4('git init', cwd='repoFish')
+
+>>> ans = execute4('rm -rf repoBird')
+>>> ans = execute4('mkdir repoBird')
+>>> ans = execute4('git init', cwd='repoBird')
+
+>>> ans = execute4('rm -rf repoSyncFile')
+>>> ans = execute4('mkdir repoSyncFile')
+>>> ans = execute4('git init', cwd='repoSyncFile')
+
+# Filling Repos Sync Point 1
+
+>>> ans = execute4('echo "trout" >> Fish.txt', cwd='repoFish')
+>>> ans = execute4('git add Fish.txt', cwd='repoFish')
+>>> ans = execute4('git commit -am "committing trout"', cwd='repoFish')
+>>> troutHash = execute4('git rev-parse HEAD', cwd='repoFish')[1].strip()
+
+>>> ans = execute4('echo "sparrow" >> Bird.txt', cwd='repoBird')
+>>> ans = execute4('git add Bird.txt', cwd='repoBird')
+>>> ans = execute4('git commit -am "committing sparrow"', cwd='repoBird')
+>>> sparrowHash = execute4('git rev-parse HEAD', cwd='repoBird')[1].strip()
+
+>>> ans = execute4('banksync/banksync.py generateSyncFile --syncfile repoSyncFile/syncfile.wl repoFish repoBird')
+>>> ans = execute4('git add syncfile.wl', cwd='repoSyncFile')
+>>> ans = execute4('git commit -am "syncPoint1"', cwd='repoSyncFile')
+>>> syncPoint1 = execute4('git rev-parse HEAD', cwd='repoSyncFile')[1].strip()
+>>> time.sleep(4)
+
+# Filling Repos Sync Point 2
+
+>>> ans = execute4('echo "snapper" >> Fish.txt', cwd='repoFish')
+>>> ans = execute4('git add Fish.txt', cwd='repoFish')
+>>> ans = execute4('git commit -am "committing snapper"', cwd='repoFish')
+>>> snapperHash = execute4('git rev-parse HEAD', cwd='repoFish')[1].strip()
+
+>>> ans = execute4('echo "hawk" >> Bird.txt', cwd='repoBird')
+>>> ans = execute4('git add Bird.txt', cwd='repoBird')
+>>> ans = execute4('git commit -am "committing hawk"', cwd='repoBird')
+>>> hawkHash = execute4('git rev-parse HEAD', cwd='repoBird')[1].strip()
+
+>>> ans = execute4('banksync/banksync.py createSyncPoint --syncfile repoSyncFile/syncfile.wl')
+>>> ans = execute4('git add syncfile.wl', cwd='repoSyncFile')
+>>> ans = execute4('git commit -am "syncPoint2"', cwd='repoSyncFile')
+>>> syncPoint2 = execute4('git rev-parse HEAD', cwd='repoSyncFile')[1].strip()
+>>> time.sleep(4)
+
+# Filling Repos Sync Point 3
+
+>>> ans = execute4('echo "salmon" >> Fish.txt', cwd='repoFish')
+>>> ans = execute4('git add Fish.txt', cwd='repoFish')
+>>> ans = execute4('git commit -am "committing salmon"', cwd='repoFish')
+>>> salmonHash = execute4('git rev-parse HEAD', cwd='repoFish')[1].strip()
+
+>>> ans = execute4('echo "eagle" >> Bird.txt', cwd='repoBird')
+>>> ans = execute4('git add Bird.txt', cwd='repoBird')
+>>> ans = execute4('git commit -am "committing eagle"', cwd='repoBird')
+>>> eagleHash = execute4('git rev-parse HEAD', cwd='repoBird')[1].strip()
+
+>>> ans = execute4('banksync/banksync.py createSyncPoint --syncfile repoSyncFile/syncfile.wl')
+>>> ans = execute4('git add syncfile.wl', cwd='repoSyncFile')
+>>> ans = execute4('git commit -am "syncPoint3"', cwd='repoSyncFile')
+>>> syncPoint3 = execute4('git rev-parse HEAD', cwd='repoSyncFile')[1].strip()
+
+>>> troutHash != snapperHash != salmonHash != sparrowHash != hawkHash != eagleHash
+True
+
+
+# Test roll back
+
+>>> ans = execute4('git checkout {syncPoint1}', cwd='repoSyncFile')
+>>> ans = execute4('banksync/banksync.py sync --syncfile repoSyncFile/syncfile.wl')
+>>> troutHash == execute4('git rev-parse HEAD', cwd='repoFish')[1].strip()
+True
+>>> sparrowHash == execute4('git rev-parse HEAD', cwd='repoBird')[1].strip()
+True
+
+>>> ans = execute4('git checkout {syncPoint2}', cwd='repoSyncFile')
+>>> ans = execute4('banksync/banksync.py sync --syncfile repoSyncFile/syncfile.wl')
+>>> snapperHash == execute4('git rev-parse HEAD', cwd='repoFish')[1].strip()
+True
+>>> hawkHash == execute4('git rev-parse HEAD', cwd='repoBird')[1].strip()
+True
+
+>>> ans = execute4('git checkout master', cwd='repoSyncFile')
+>>> ans = execute4('banksync/banksync.py sync --syncfile repoSyncFile/syncfile.wl')
+>>> salmonHash == execute4('git rev-parse HEAD', cwd='repoFish')[1].strip()
+True
+>>> eagleHash == execute4('git rev-parse HEAD', cwd='repoBird')[1].strip()
+True
+
+
+# Test bisect
+
+>>> ans = execute4('banksync/banksync.py bisect --syncfile repoSyncFile/syncfile.wl start')
+>>> ans = execute4('banksync/banksync.py bisect --syncfile repoSyncFile/syncfile.wl good {syncPoint1}')
+>>> ans = execute4('banksync/banksync.py bisect --syncfile repoSyncFile/syncfile.wl bad {syncPoint3}')
+>>> syncPoint2 == execute4('git rev-parse HEAD', cwd='repoSyncFile')[1].strip()
+True
+>>> ans = execute4('banksync/banksync.py bisect --syncfile repoSyncFile/syncfile.wl good {syncPoint2}')
+>>> bool(re.search(syncPoint3.strip() + ' is the first bad commit', ans[1]))
+True
+
+
+# Test sync with timestamps
+
+#     update client repos to master, and sync repo to syncPoint1
+>>> ans = execute4('git checkout master', cwd='repoSyncFile')
+>>> ans = execute4('banksync/banksync.py sync --syncfile repoSyncFile/syncfile.wl')
+>>> ans = execute4('git checkout {syncPoint1}', cwd='repoSyncFile')
+
+#     remove hashes from syncfile.wl
+>>> dict = loadSyncFileAsDict('repoSyncFile/syncfile.wl')
+>>> del dict['repoFish']['sha']
+>>> del dict['repoBird']['sha']
+>>> writeDictToSyncFile('repoSyncFile/syncfile.wl', dict)
+
+#     verify that sync now correctly updates to the timestamps
+>>> ans = execute4('banksync/banksync.py sync --syncfile repoSyncFile/syncfile.wl')
+>>> troutHash == execute4('git rev-parse HEAD', cwd='repoFish')[1].strip()
+True
+>>> sparrowHash == execute4('git rev-parse HEAD', cwd='repoBird')[1].strip()
+True
+
+#     checkout syncPoint2
+>>> ans = execute4('git reset --hard', cwd='repoSyncFile')
+>>> ans = execute4('git checkout {syncPoint2}', cwd='repoSyncFile')
+
+#     remove hashes from syncfile.wl and alter the UnixTimeStamps
+>>> dict = loadSyncFileAsDict('repoSyncFile/syncfile.wl')
+>>> del dict['repoFish']['sha']
+>>> del dict['repoBird']['sha']
+>>> dict['repoFish']['UnixTimeStamp'] = str(int(dict['repoFish']['UnixTimeStamp'])+1)
+>>> dict['repoBird']['UnixTimeStamp'] = str(int(dict['repoBird']['UnixTimeStamp'])+1)
+>>> writeDictToSyncFile('repoSyncFile/syncfile.wl', dict)
+
+#     confirm that we get no update unless if we allow only exact timestamps
+>>> ans = execute4('banksync/banksync.py sync --syncfile repoSyncFile/syncfile.wl --matching timestamp', ignoreErrors=True)
+>>> bool(re.search('failure! not all repos checked out to the specified sync state.', ans[1]))
+True
+
+>>> troutHash == execute4('git rev-parse HEAD', cwd='repoFish')[1].strip()
+True
+>>> sparrowHash == execute4('git rev-parse HEAD', cwd='repoBird')[1].strip()
+True
+
+#     confirm that we get the correct update if we allow close timestamps
+>>> ans = execute4('banksync/banksync.py sync --syncfile repoSyncFile/syncfile.wl --matching closetimestamp')
+>>> snapperHash == execute4('git rev-parse HEAD', cwd='repoFish')[1].strip()
+True
+>>> hawkHash == execute4('git rev-parse HEAD', cwd='repoBird')[1].strip()
+True
+
+#>>> ans = execute4('rm -rf repoFish repoSyncFile repoBird')

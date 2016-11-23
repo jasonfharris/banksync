@@ -1,0 +1,332 @@
+#!/usr/bin/env python
+# PYTHON_ARGCOMPLETE_OK
+
+import os.path
+import string
+import sys
+import time
+import re
+import argparse
+import argcomplete
+import json
+from collections import OrderedDict
+from sysexecute import *
+from banksync_common import *
+
+
+scriptname = os.path.basename(sys.argv[0])
+
+# --------------------------------------------------------------------------------------------------------------------------
+# Defines
+# --------------------------------------------------------------------------------------------------------------------------
+
+tryOrder = ["sha", "UnixTimeStamp"]
+defaultSyncPointBranchName = "syncPoint"
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------
+# Parse the arguments
+# --------------------------------------------------------------------------------------------------------------------------
+
+sync_commands = ['sync', 'createSyncPoint', 'generateSyncFile', 'bisect']
+git_commands = ['gitclone', 'gitreset', 'gitlog', 'gitstatus', 'gitbranch', 'gitcheckout', 'gitcommit', 'gitdiff', 'gitfecth', 'gitpush', 'gitpull', 'gitprune', 'gitgc', 'gitfsck']
+commands = sync_commands + git_commands
+matchingOpts = ['shaOnly', 'timestamp', 'closetimestamp']
+
+
+
+mainDescription = 'execute operations across a collection of git repositories.'
+bodyDescription = stringWithVars(
+'''Utility to checkout or create a synchronized state across a collection of
+repositories. This utility works on a syncfile. It is a more general way to
+handle sub-repositories / submodules. It is intended to be less brittle than
+traditional ways to specify submodules by allowing some looseness / decoupling.
+
+It can also be used to issue a normal git command to every repository specified in the syncfile.
+Current git commands allowed are {git_commands} (although adding others is a quick script change)
+
+The options, eg the --syncfile option and the --cwd  option, can be specified in a standard ini
+config file `bankconfig.ini` so they do not need to be specified each time on the command line.
+
+Example usage:
+
+  {scriptname} sync --syncfile syncfile.wl
+
+This would checkout / update the repos given in the syncfile to the states given in the syncfile.
+
+  {scriptname} sync --syncfile syncfile.wl --cwd ../other/dir
+
+This would checkout / update the repos given in the syncfile to the states given in the syncfile
+(but the path to the repos are prefixed by the value of cwd).
+
+  {scriptname} createSyncPoint --syncfile syncfile.wl
+
+This would alter the revisions stored in the syncfile.wl to match the current revisions of the referenced repositories.
+
+  {scriptname} generateSyncFile --syncfile syncfile.wl repo1 repo2 ... repoN
+
+This would generate or overwrite the syncfile.wl to contain sync points for the current states of repo1 repo2 ... repoN
+
+  {scriptname} gitstatus --syncfile syncfile.wl
+
+Perform gitstatus and list the results on each of the repositories specified in the syncfile.wl
+
+  {scriptname} sync
+
+Use the syncfile specified in the  and list the results on each of the repositories specified in the syncfile.wl
+''')
+
+bodyDescription = wrapParagraphs(bodyDescription)
+
+def parseArguments():
+    parser = argparse.ArgumentParser(description=mainDescription, epilog=bodyDescription, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("command", metavar="ACTION", nargs='?', help=stringWithVars("perform one of {sync_commands} on a syncfile, or one of {git_commands} on all the repos in the bank."), choices=commands, default='gitstatus')
+    parser.add_argument("--syncfile", metavar="SYNCFILE", help="the path to the syncfile", default='Automatic')
+    parser.add_argument("--cwd", metavar="CWD", help="prefix / change the working directory for the repos in the sync file", default="Automatic")
+    parser.add_argument("--matching", metavar="MATCH", help=stringWithVars('specify how we can recognize a revision "match": {matchingOpts}'), choices=matchingOpts, default="Automatic")
+    parser.add_argument("--verbosity", metavar="NUM", help="Specify the level of feedback detail for the install", default="Automatic")
+    parser.add_argument('--dryRun',dest='dryRun',action='store_true', help="Print what would happen instead of executing the deploy")
+    parser.set_defaults(dryrun=False)
+    argcomplete.autocomplete(parser)
+
+    args, remainingArgs = parser.parse_known_args()
+    remainingArgs = [correctlyQuoteArg(arg) for arg in remainingArgs]
+    return args, remainingArgs
+
+
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------
+# command "sync"
+# --------------------------------------------------------------------------------------------------------------------------
+
+def commandSync():
+    checkForSyncRepo(syncFilePath)
+    syncDict = loadSyncFileAsDict(syncFilePath)
+    allFound = True
+
+    for repoName in syncDict:
+        repoInfo = syncDict[repoName]
+        absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
+        repoString = paddedRepoName(repoName,syncDict)
+        if not checkForRepo(repoString, absRepoPath):
+            allFound = False
+            continue
+    
+        found = False
+        for method in tryOrder:
+            if found:
+                break
+
+            if (method == "sha") and ("sha" in repoInfo):
+                hash = repoInfo["sha"]
+                res = gitCommand("git checkout -B {defaultSyncPointBranchName} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
+                if res["code"] == 0:
+                    revNum = getRevNumber(hash, absRepoPath)
+                    printWithVars2("{repoString}: succesfully checked out revision by {method}: {hash} (revision number {revNum})")
+                    found = True
+                    break
+                printWithVars3("{repoString}: failed to check out revision by {method}: {hash}")
+
+            if (method == "UnixTimeStamp") and ("UnixTimeStamp" in repoInfo):
+                if (matching == 'timestamp') or (matching == 'closetimestamp'):
+                    ts = repoInfo["UnixTimeStamp"]
+                    date = dateFromTimeStamp(ts)
+                    res = gitCommand("git log --all --format=format:'\"%at\" : \"%H\",'", 4, cwd=absRepoPath, raiseOnFailure=True, verbosity=verbosity, permitShowingStdOut=False, permitShowingStdErr=False)
+                    shaHash = 0
+                    if res["code"] == 0:
+                        timestampsToShas = json.loads('{'+res["stdout"][0:-1]+'}')
+                        if (ts in timestampsToShas):
+                            if (matching == 'timestamp') or (matching == 'closetimestamp'):
+                                hash = timestampsToShas[ts]
+                                branch=defaultSyncPointBranchName
+                                res = gitCommand("git checkout -B {branch} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
+                                if res["code"] == 0:
+                                    revNum = getRevNumber(hash, absRepoPath)
+                                    printWithVars2("{repoString}: succesfully checked out revision by {method}: {ts} ({date}) {hash} (revision number {revNum})")
+                                    found = True
+                                    break
+                        else:
+                            if matching == 'closetimestamp':
+                                closestTimestamp = min(timestampsToShas, key=lambda x:abs(int(x)-int(ts)))
+                                closestDate = dateFromTimeStamp(closestTimestamp)
+                                hash = timestampsToShas[closestTimestamp]
+                                branch=defaultSyncPointBranchName
+                                res = gitCommand("git checkout -B {branch} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
+                                if res["code"] == 0:
+                                    revNum = getRevNumber(hash, absRepoPath)
+                                    printWithVars2("{repoString}: warning checking out revision by closest timestamp.", "red")
+                                    printWithVars2("       requested {method}: {ts} ({date})")
+                                    printWithVars2("       used      {method}: {closestTimestamp} ({closestDate}) {hash} (revision number {revNum})")
+                                    found = True
+                                    break
+
+                    printWithVars3("{repoString}: failed to check out revision by {method}: {ts} {date}")
+
+        if not found:
+            allFound = False
+            printWithVars2("{repoString}: failed to check out specified revision by any method.")
+    if allFound:
+        print colored("success! all repos checked out to the specified sync state.", 'green')
+    else:
+        print colored("failure! not all repos checked out to the specified sync state.", 'red')
+        sys.exit(1)
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------
+# command "createSyncPoint"
+# --------------------------------------------------------------------------------------------------------------------------
+
+def commandSyncCreateSyncPoint():
+    checkForSyncRepo(syncFilePath)
+    syncDict = loadSyncFileAsDict(syncFilePath)
+    newSyncDict = OrderedDict(syncDict)
+    anyFailures = False
+    for repoName in syncDict:
+        repoInfo = syncDict[repoName]
+        absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
+        repoString = paddedRepoName(repoName,syncDict)
+        if not checkForRepo(repoString, absRepoPath):
+            anyFailures = True
+            continue
+        (worked, newRepoInfo) = dictFromCurrentRepoState(repoInfo["path"], cwd=cwd, verbosity=verbosity)
+        if worked:
+            hash = newRepoInfo["sha"]
+            date = newRepoInfo["date"]
+            printWithVars2("{repoName}: recording bank sync state of {hash}, {date}.")
+        else:
+            printWithVars2("failure! not able to get the status of {repoName} at {absRepoPath}", 'red')
+            anyFailures = True
+        newSyncDict[repoName] = newRepoInfo
+    
+    writeDictToSyncFile(syncFilePath, newSyncDict)
+
+    if anyFailures:
+        printWithVars1("failure! not all constituent repos had their state recorded.", 'red')
+        sys.exit(1)
+    else:
+        printWithVars1("success! all constituent repos had their state recorded.", 'green')
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------
+# command "generateSyncFile"
+# --------------------------------------------------------------------------------------------------------------------------
+
+def commandGenerateSyncFile():
+    checkForSyncRepoDir(syncFilePath, existing = False)
+    newSyncDict = OrderedDict()
+    anyFailures = False
+    for repo in remainingArgs:
+        absRepoPath = getAbsRepoPath(repo, cwd)
+        repoName = os.path.basename(absRepoPath)
+        if not checkForRepo(repoName, absRepoPath):
+            anyFailures = True
+            continue
+        (worked, newRepoInfo) = dictFromCurrentRepoState(repo, cwd=cwd, verbosity=verbosity)
+        if worked:
+            hash = newRepoInfo["sha"]
+            date = newRepoInfo["date"]
+            printWithVars2("{repoName}: recording bank sync state of {hash}, {date}.")
+        else:
+            printWithVars2("failure! not able to get the status of {repoName} at {absRepoPath}", 'red')
+            anyFailures = True
+        newSyncDict[repoName] = newRepoInfo
+
+    writeDictToSyncFile(syncFilePath, newSyncDict)
+
+    if anyFailures:
+        printWithVars1("failure! not all constituent repos had their state recorded.", 'red')
+        sys.exit(1)
+    else:
+        printWithVars1("success! all constituent repos had their state recorded.", 'green')
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------
+# command "bisect"
+# --------------------------------------------------------------------------------------------------------------------------
+
+def commandBisect():
+    bisectCmd = "git bisect " + " ".join(remainingArgs)
+    res = gitCommand(bisectCmd, 2, cwd=syncRepoPath, verbosity=verbosity);
+    commandSync()
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------
+# a git command
+# --------------------------------------------------------------------------------------------------------------------------
+
+def distributeGitCommand(command):
+    cmd = command[3:]
+    gitCmd = "git " + command[3:] + " " + " ".join(remainingArgs)
+    gitCmd = gitCmd.strip()
+    checkForSyncRepoDir(syncFilePath)
+    syncDict = loadSyncFileAsDict(syncFilePath)
+    anyFailures = False
+    for repoName in syncDict:
+        repoInfo = syncDict[repoName]
+        absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
+        if not checkForRepo(repoName, absRepoPath):
+            anyFailures = True
+            continue
+        res = gitCommand(gitCmd, 2, cwd=absRepoPath, verbosity=verbosity);
+    if anyFailures:
+        printWithVars1("failure! not all constituent repos present.", 'red')
+        sys.exit(1)
+    else:
+        printWithVars1("all constituent repos issued git command '{gitCmd}'", 'green')
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------
+# dispatch command
+# --------------------------------------------------------------------------------------------------------------------------
+
+def dispatchCommand(command):
+    #from pudb import set_trace; set_trace()
+    if command == "sync":
+        commandSync()
+    if command == "createSyncPoint":
+        commandSyncCreateSyncPoint()
+    if command == "generateSyncFile":
+        commandGenerateSyncFile()
+    if command == "bisect":
+        commandBisect()
+    if command in git_commands:
+        distributeGitCommand(command)
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------
+# Extract and clean the argument parameters
+# --------------------------------------------------------------------------------------------------------------------------
+
+def main():
+    global remainingArgs, syncFilePath, syncRepoPath, cwd, matching, verbosity
+    args, remainingArgs = parseArguments()
+
+    # Get the config file path
+    if args.cwd != "Automatic":
+        configFile = os.path.abspath(os.path.join(args.cwd, 'bankconfig.ini'))
+    else:
+        configFile = os.path.abspath('bankconfig.ini')
+
+    command = args.command
+    syncFilePath = getSetting(args.syncfile, configFile, 'syncfile', 'syncfile.wl')
+    syncRepoPath = os.path.dirname(os.path.abspath(syncFilePath))
+    cwd = getSetting(args.cwd, configFile, 'cwd', '.')
+    matching = getSetting(args.matching, configFile, 'matching', 'closetimestamp')
+    verbosity= getSetting(args.verbosity, configFile, 'verbosity', 2)
+    set_defaults('verbosity', verbosity)
+    set_defaults('dryRun', args.dryRun)
+
+    dispatchCommand(command)
+
+
+if __name__ == '__main__':
+    main()
