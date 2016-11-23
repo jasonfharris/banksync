@@ -14,22 +14,22 @@
 # Test errors in generation
 
 >>> ans = execute4('rm -rf repoBob repoFish repoBird')
->>> ans = execute4('banksync/banksync.py generateSyncFile --syncfile repoBob/syncfile.wl repoFish repoBird', ignoreErrors=True)
->>> bool(re.search('failure! could not locate the sync repo dir at .*repoBob', ans[1]))
+>>> ans = execute4('banksync/banksync.py createSyncfile --syncfile repoBob/syncfile.wl repoFish repoBird', ignoreErrors=True)
+>>> bool(re.search('failure! could not locate the syncrepo dir at .*repoBob', ans[1]))
 True
 
 >>> ans = execute4('mkdir repoBob')
->>> ans = execute4('banksync/banksync.py generateSyncFile --syncfile repoBob/syncfile.wl repoFish repoBird', ignoreErrors=True)
+>>> ans = execute4('banksync/banksync.py createSyncfile --syncfile repoBob/syncfile.wl repoFish repoBird', ignoreErrors=True)
 >>> bool(re.search('failure! .*repoBob is not a git repository', ans[1]))
 True
 
 >>> ans = execute4('git init', cwd='repoBob')
->>> ans = execute4('banksync/banksync.py generateSyncFile --syncfile repoBob/syncfile.wl repoFish repoBird', ignoreErrors=True)
+>>> ans = execute4('banksync/banksync.py createSyncfile --syncfile repoBob/syncfile.wl repoFish repoBird', ignoreErrors=True)
 >>> bool(re.search(' there is no repository at .*repoFish.*there is no repository at .*repoBird.*failure! not all constituent repos had their state recorded', ans[1], re.DOTALL))
 True
 
 >>> ans = execute4('mkdir repoFish')
 >>> ans = execute4('mkdir repoBird')
->>> ans = execute4('banksync/banksync.py generateSyncFile --syncfile repoBob/syncfile.wl repoFish repoBird', ignoreErrors=True)
+>>> ans = execute4('banksync/banksync.py createSyncfile --syncfile repoBob/syncfile.wl repoFish repoBird', ignoreErrors=True)
 >>> bool(re.search('repoFish is not a git repository.*repoBird is not a git repository.*failure! not all constituent repos had their state recorded', ans[1], re.DOTALL))
 True

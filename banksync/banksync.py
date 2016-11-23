@@ -13,7 +13,7 @@ from collections import OrderedDict
 from sysexecute import *
 from banksync_common import *
 
-__version__ = "0.7.1"
+__version__ = "0.7.2"
 
 
 # --------------------------------------------------------------------------------------------------------------------------
@@ -26,70 +26,232 @@ defaultSyncPointBranchName = "syncPoint"
 
 
 # --------------------------------------------------------------------------------------------------------------------------
-# Parse the arguments
+# Command and Option setup
 # --------------------------------------------------------------------------------------------------------------------------
 
-sync_commands = ['sync', 'createSyncPoint', 'generateSyncFile', 'bisect', 'clone']
-git_commands = ['gitclone', 'gitreset', 'gitlog', 'gitstatus', 'gitbranch', 'gitcheckout', 'gitcommit', 'gitdiff', 'gitfecth', 'gitpush', 'gitpull', 'gitprune', 'gitgc', 'gitfsck']
+defaultOptions = {
+    'General' : {
+        'cwd' : '.',
+        'syncfile' : 'syncfile.wl',
+        'verbosity' : 2,
+        'colorize' : 'yes'
+    },
+    'sync' : {
+        'matching' : 'closetimestamp'
+    }
+}
+
+sync_commands = ['sync', 'recordRepos', 'createSyncfile', 'bisect', 'clone', 'git', 'gitall']
+git_commands = ['reset', 'log', 'status', 'branch', 'checkout', 'commit', 'tag', 'diff',
+                   'fecth', 'push', 'pull', 'prune', 'gc', 'fsck', 'ls-files', 'ls-remote', 'ls-tree']
 commands = sync_commands + git_commands
-matchingOpts = ['shaOnly', 'timestamp', 'closetimestamp']
+matchingOptionValues = ['shaOnly', 'timestamp', 'closetimestamp']
+colorizeOptionValues = ['yes', 'no']
+
+# This list was culled from `git help -a`
+allGitCommands = [
+  'add',                       'credential-store',          'index-pack',                'patch-id',                  'shortlog',
+  'add--interactive',          'cvsexportcommit',           'init',                      'prune',                     'show',
+  'am',                        'cvsimport',                 'init-db',                   'prune-packed',              'show-branch',
+  'annotate',                  'cvsserver',                 'instaweb',                  'pull',                      'show-index',
+  'apply',                     'daemon',                    'interpret-trailers',        'push',                      'show-ref',
+  'archimport',                'describe',                  'log',                       'quiltimport',               'stage',
+  'archive',                   'diff',                      'ls-files',                  'read-tree',                 'stash',
+  'bisect',                    'diff-files',                'ls-remote',                 'rebase',                    'status',
+  'bisect--helper',            'diff-index',                'ls-tree',                   'receive-pack',              'stripspace',
+  'blame',                     'diff-tree',                 'mailinfo',                  'reflog',                    'submodule',
+  'branch',                    'difftool',                  'mailsplit',                 'relink',                    'submodule--helper',
+  'bundle',                    'difftool--helper',          'merge',                     'remote',                    'svn',
+  'cat-file',                  'fast-export',               'merge-base',                'remote-ext',                'symbolic-ref',
+  'check-attr',                'fast-import',               'merge-file',                'remote-fd',                 'tag',
+  'check-ignore',              'fetch',                     'merge-index',               'remote-ftp',                'unpack-file',
+  'check-mailmap',             'fetch-pack',                'merge-octopus',             'remote-ftps',               'unpack-objects',
+  'check-ref-format',          'filter-branch',             'merge-one-file',            'remote-http',               'update-index',
+  'checkout',                  'fmt-merge-msg',             'merge-ours',                'remote-https',              'update-ref',
+  'checkout-index',            'for-each-ref',              'merge-recursive',           'remote-testsvn',            'update-server-info',
+  'cherry',                    'format-patch',              'merge-resolve',             'repack',                    'upload-archive',
+  'cherry-pick',               'fsck',                      'merge-subtree',             'replace',                   'upload-pack',
+  'citool',                    'fsck-objects',              'merge-tree',                'request-pull',              'var',
+  'clean',                     'gc',                        'mergetool',                 'rerere',                    'verify-commit',
+  'clone',                     'get-tar-commit-id',         'mktag',                     'reset',                     'verify-pack',
+  'column',                    'grep',                      'mktree',                    'rev-list',                  'verify-tag',
+  'commit',                    'gui',                       'mv',                        'rev-parse',                 'web--browse',
+  'commit-tree',               'gui--askpass',              'name-rev',                  'revert',                    'whatchanged',
+  'config',                    'hash-object',               'notes',                     'rm',                        'worktree',
+  'count-objects',             'help',                      'p4',                        'send-email',                'write-tree',
+  'credential',                'http-backend',              'pack-objects',              'send-pack',
+  'credential-cache',          'http-fetch',                'pack-redundant',            'sh-i18n--envsubst',
+  'credential-cache--daemon',  'http-push',                 'pack-refs',                 'shell',
+]
 
 
+
+# --------------------------------------------------------------------------------------------------------------------------
+# Set up argument parsing
+# --------------------------------------------------------------------------------------------------------------------------
 
 mainDescription = 'execute operations across a collection of git repositories.'
-bodyDescription = stringWithVars(
-'''Utility to checkout or create a synchronized state across a collection of
-repositories. This utility works on a syncfile. It is a more general way to
-handle sub-repositories / submodules. It is intended to be less brittle than
+mainEpilog = wrapParagraphs(
+'''bank is a command line utility to checkout or create a synchronized state across a collection (a bank) of
+repositories, or to perform a git command in each of the repositories in the bank. The information about the
+repositories in the bank is specified in a "syncfile". The syncfile lives inside a normal git repo which we call the
+"syncrepo".
+
+Using bank allows a more general way to handle sub-repositories / submodules. It is intended to be less brittle than
 traditional ways to specify submodules by allowing some looseness / decoupling.
 
-It can also be used to issue a normal git command to every repository specified in the syncfile.
-Current git commands allowed are {git_commands} (although adding others is a quick script change)
+The bank command line utility can also be used to issue a normal git command to every repository specified in the
+syncfile through use of `bank git <cmd>` and `bank gitall <cmd>`. Ie to issue the git command <cmd> to every repo in the bank of repos.
 
-The options, eg the --syncfile option and the --cwd  option, can be specified in a standard ini
-config file `bankconfig.ini` so they do not need to be specified each time on the command line.
+All of the options, eg the --syncfile option, the --cwd  option, etc., can be specified in a standard ini config file
+`bankconfig.ini` so they do not need to be specified each time on the command line. If the bank command uses the config
+file than the bank command must be executed from the same directory which contains the bankconfig.ini file. ''')
 
-Example usage:
+
+
+#  CMD: sync ----------
+
+syncCmdHelp = 'checkout / update the repos given in the syncfile to the states given in the syncfile'
+syncCmdDescription = syncCmdHelp
+syncCmdEpilog = wrapParagraphs('''Example usage:
 
   bank sync --syncfile syncfile.wl
 
-This would checkout / update the repos given in the syncfile to the states given in the syncfile.
+This would checkout / update the repos given in the syncfile.wl to the states given
+in the syncfile.wl.
 
   bank sync --syncfile syncfile.wl --cwd ../other/dir
 
-This would checkout / update the repos given in the syncfile to the states given in the syncfile
-(but the path to the repos are prefixed by the value of cwd).
-
-  bank createSyncPoint --syncfile syncfile.wl
-
-This would alter the revisions stored in the syncfile.wl to match the current revisions of the referenced repositories.
-
-  bank generateSyncFile --syncfile syncfile.wl repo1 repo2 ... repoN
-
-This would generate or overwrite the syncfile.wl to contain sync points for the current states of repo1 repo2 ... repoN
-
-  bank gitstatus --syncfile syncfile.wl
-
-Perform gitstatus and list the results on each of the repositories specified in the syncfile.wl
+This would checkout / update the repos given in the syncfile.wl to the states given
+in the syncfile.wl (but the path to the repos are prefixed by the value of cwd).
 
   bank sync
 
-Use the syncfile specified in the  and list the results on each of the repositories specified in the syncfile.wl
+Use the syncfile specified in the file bankconfig.ini and list the results of the sync
+on each repo in the bank.
 ''')
 
-bodyDescription = wrapParagraphs(bodyDescription)
+
+#  CMD: recordRepos ----------
+
+recordReposCmdHelp = 'alter the contents of the syncfile so that it matches the current revisions of the referenced repositories.'
+recordReposCmdDescription = recordReposCmdHelp
+recordReposCmdEpilog = wrapParagraphs('''Example usage:
+
+  bank recordRepos --syncfile syncfile.wl
+
+This would alter the contents of syncfile.wl so that it matches the current revisions of the referenced repositories.
+''')
+
+
+#  CMD: createSyncfile ----------
+
+createSyncfileCmdHelp = 'create or overwrite the syncfile to contain the current sync states for the passed in repos.'
+createSyncfileCmdDescription = createSyncfileCmdHelp
+createSyncfileCmdEpilog = wrapParagraphs('''Example usage:
+
+  bank createSyncfile --syncfile syncfile.wl --cwd .. repo1 repo2 ... repoN
+
+This would create or overwrite the syncfile.wl to record the current states of repo1 repo2 ... repoN which are located
+one directory level up.
+''')
+
+
+#  CMD: clone ----------
+
+cloneCmdHelp = 'clone the repos specified in the syncfile'
+cloneCmdDescription = cloneCmdHelp
+cloneCmdEpilog = wrapParagraphs('''Example usage:
+
+  bank clone --syncfile syncfile.wl
+
+This would perform a git clone for each of the repositories specified in the syncfile
+''')
+
+
+#  CMD: bisect ----------
+
+bisectCmdHelp = 'bisect the syncrepo and sync all repos in the bank to the new state of the syncfile'
+bisectCmdDescription = cloneCmdHelp
+bisectCmdEpilog = wrapParagraphs('''Example usage:
+
+  bank bisect --syncfile syncfile.wl reset
+
+This would pass the reset to the bisection of the sync-repo.
+''')
+
+
+#  CMD: git ----------
+
+gitCmdHelp = 'perform the given git command in each repo in the bank'
+gitCmdDescription = gitCmdHelp
+gitCmdEpilog = wrapParagraphs('''Example usage:
+
+  bank git status --syncfile syncfile.wl 
+
+Perform git status and list the results on each of the repositories specified in the syncfile.wl
+
+  bank git tag release_1.7.0.1
+
+Use the syncfile specified in the file bankconfig.ini and apply the command `git tag release_1.7.0.1` to each of the
+repos in the bank.
+''')
+
+
+#  CMD: gitall ----------
+
+gitallCmdHelp = 'perform the given git command in each repo in the bank and additionally in the syncrepo'
+gitallCmdDescription = gitallCmdHelp
+gitallCmdEpilog = wrapParagraphs('''
+
+The common git commands which make sense have been "approved" are
+{git_commands}. (Actually any git command can be used but so far only those common git
+commands have been "approved" as making sense in the setting of banksync. Some other git commands definitely do not make
+sense such as `git rebase --interactive` since the bank command is not interactive. Command completion on the command
+line only works for the common commands.
+
+Example usage:
+
+  bank gitall status --syncfile syncfile.wl 
+
+Perform git status and list the results on each of the repositories specified in the syncfile.wl
+and in addition to the actual repo containing the sync file (the syncrepo)
+
+  bank gitall tag release_1.7.0.1
+
+Use the syncfile specified in the file bankconfig.ini and apply the command `git tag release_1.7.0.1` to each of the
+repos in the bank and in addition to the actual repo containing the sync file (the syncrepo).
+''')
 
 def parseArguments():
-    parser = argparse.ArgumentParser(description=mainDescription, epilog=bodyDescription, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("command", metavar="ACTION", nargs='?', help=stringWithVars("perform one of {sync_commands} on a syncfile, or one of {git_commands} on all the repos in the bank."), choices=commands, default='gitstatus')
-    parser.add_argument("--syncfile", metavar="SYNCFILE", help="the path to the syncfile", default='Automatic')
-    parser.add_argument("--cwd", metavar="CWD", help="prefix / change the working directory for the repos in the sync file", default="Automatic")
-    parser.add_argument("--matching", metavar="MATCH", help=stringWithVars('specify how we can recognize a revision "match": {matchingOpts}'), choices=matchingOpts, default="Automatic")
-    parser.add_argument("--verbosity", metavar="NUM", help="Specify the level of feedback detail for the install", type=int, default=AutomaticNum)
-    parser.add_argument('--dryRun',dest='dryRun',action='store_true', help="Print what would happen instead of executing the deploy")
-    parser.add_argument('--version',dest='version',action='store_true', help="Show the version number of the banksync tool")
-    parser.set_defaults(dryrun=False)
+
+    parent_parser = argparse.ArgumentParser(add_help=False)                                 
+    parent_parser.add_argument("--syncfile", metavar="SYNCFILE", help="the path to the syncfile", default='auto')
+    parent_parser.add_argument("--cwd", metavar="CWD", help="prefix / change the working directory for the repos in the sync file", default='auto')
+    parent_parser.add_argument("--verbosity", metavar="NUM", help="Specify the level of reported feedback / detail. Acceptable values: 1 (minimal feedback), 2 (some feedback) , 3 (detailed feedback), or 4 (full feedback)", type=int, default=autoNum)
+    parent_parser.add_argument('--colorize', dest='colorize', help="Colorize the output: {colorizeOptionValues}", choices=colorizeOptionValues, default='auto')
+    parent_parser.add_argument('--dryrun', dest='dryrun', action='store_true', help="Print what would happen instead of performing the command")
+    parent_parser.set_defaults(dryrun=False)
+
+    parser = argparse.ArgumentParser(description=mainDescription, epilog=mainEpilog, formatter_class=argparse.RawDescriptionHelpFormatter, prog='bank')
+    parser.add_argument('--version', dest='version', action='store_true', help="Show the version number of the banksync tool and exit")
     parser.set_defaults(version=False)
+
+    subparsers = parser.add_subparsers(title='commands', dest='subparser_name', metavar = '')
+    def addSubparser(name):
+        return subparsers.add_parser(name, help=eval(name+'CmdHelp'), description=eval(name+'CmdDescription'), epilog=eval(name+'CmdEpilog'), parents = [parent_parser], formatter_class=argparse.RawDescriptionHelpFormatter)
+        
+    parser_syncCmd = addSubparser('sync')
+    parser_syncCmd.add_argument("--matching", metavar="MATCH", help=stringWithVars('specify how we can recognize a revision "match": {matchingOptionValues}'), choices=matchingOptionValues, default='auto')
+    parser_recordReposCmd = addSubparser('recordRepos')
+    parser_createSyncfileCmd = addSubparser('createSyncfile')
+    parser_cloneCmd = addSubparser('clone')
+    parser_bisectCmd = addSubparser('bisect')
+    parser_gitCmd = addSubparser('git')
+    parser_gitCmd.add_argument("gitcmd", metavar="GITCMD", nargs='?', help=stringWithVars("perform one of {git_commands} on all the repos in the bank."), choices=git_commands, default='status')
+    parser_gitallCmd = addSubparser('gitall')
+    parser_gitallCmd.add_argument("gitcmd", metavar="GITCMD", nargs='?', help=stringWithVars("perform one of {git_commands} on all the repos in the bank including the syncrepo."), choices=git_commands, default='status')
+
     argcomplete.autocomplete(parser)
 
     def printVersionAndExit():
@@ -104,6 +266,12 @@ def parseArguments():
         printVersionAndExit()
 
     args, remainingArgs = parser.parse_known_args()
+    command = args.subparser_name
+
+    if (not command in commands) and (not command in allGitCommands):
+        printWithVars1("unknown command: {command}", 'red')
+        sys.exit(1)
+
     remainingArgs = [correctlyQuoteArg(arg) for arg in remainingArgs]
     if args.version:
         printVersionAndExit()
@@ -119,6 +287,7 @@ def parseArguments():
 # --------------------------------------------------------------------------------------------------------------------------
 
 def commandSync():
+    matching = resolvedOpts['sync']['matching']
     checkForSyncRepo(syncFilePath)
     syncDict = loadSyncFileAsDict(syncFilePath)
     allFound = True
@@ -197,10 +366,10 @@ def commandSync():
 
 
 # --------------------------------------------------------------------------------------------------------------------------
-# command "createSyncPoint"
+# command "recordRepos"
 # --------------------------------------------------------------------------------------------------------------------------
 
-def commandSyncCreateSyncPoint():
+def commandRecordRepos():
     checkForSyncRepo(syncFilePath)
     syncDict = loadSyncFileAsDict(syncFilePath)
     newSyncDict = OrderedDict(syncDict)
@@ -235,10 +404,10 @@ def commandSyncCreateSyncPoint():
 
 
 # --------------------------------------------------------------------------------------------------------------------------
-# command "generateSyncFile"
+# command "createSyncfile"
 # --------------------------------------------------------------------------------------------------------------------------
 
-def commandGenerateSyncFile():
+def commandCreateSyncfile():
     checkForSyncRepoDir(syncFilePath, existing = False)
     newSyncDict = OrderedDict()
     anyFailures = False
@@ -324,20 +493,31 @@ def commandClone():
 # a git command
 # --------------------------------------------------------------------------------------------------------------------------
 
-def distributeGitCommand(command):
-    cmd = command[3:]
-    gitCmd = "git " + command[3:] + " " + " ".join(remainingArgs)
+def distributeGitCommand(command, includeSyncRepo=False):
+    if not command in git_commands:
+        yellowWarning = colored("warning", 'yellow')
+        printWithVars1("{yellowWarning}: the git command `{command}` might not make sense being applied non-interactively to each repo in the bank. Use at your own discretion.")
+    if not command in allGitCommands:
+        printWithVars1("failure! unknown git command `{command}`", 'red')
+
+    gitCmd = "git " + command + " " + " ".join(remainingArgs)
     gitCmd = gitCmd.strip()
     checkForSyncRepoDir(syncFilePath)
     syncDict = loadSyncFileAsDict(syncFilePath)
     anyFailures = False
+    opts = {'captureStdOutStdErr':False, 'verbosity':verbosity}
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
         absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
         if not checkForRepo(repoName, absRepoPath):
             anyFailures = True
             continue
-        res = gitCommand(gitCmd, 2, cwd=absRepoPath, verbosity=verbosity);
+        opts['cwd'] = absRepoPath
+        gitCommand(gitCmd, 2, **opts);
+    if includeSyncRepo:
+        opts['cwd'] = syncRepoPath
+        gitCommand(gitCmd, 2, **opts);
+
     if anyFailures:
         printWithVars1("failure! not all constituent repos present.", 'red')
         sys.exit(1)
@@ -351,19 +531,20 @@ def distributeGitCommand(command):
 # --------------------------------------------------------------------------------------------------------------------------
 
 def dispatchCommand(command):
-    #from pudb import set_trace; set_trace()
     if command == "sync":
         commandSync()
     if command == "clone":
         commandClone()
-    if command == "createSyncPoint":
-        commandSyncCreateSyncPoint()
-    if command == "generateSyncFile":
-        commandGenerateSyncFile()
+    if command == "recordRepos":
+        commandRecordRepos()
+    if command == "createSyncfile":
+        commandCreateSyncfile()
     if command == "bisect":
         commandBisect()
-    if command in git_commands:
-        distributeGitCommand(command)
+    if command == "git":
+        distributeGitCommand(args.gitcmd, False)
+    if command == "gitall":
+        distributeGitCommand(args.gitcmd, True)
 
 
 
@@ -371,25 +552,53 @@ def dispatchCommand(command):
 # Extract and clean the argument parameters
 # --------------------------------------------------------------------------------------------------------------------------
 
-def main():
-    global remainingArgs, syncFilePath, syncRepoPath, cwd, matching, verbosity
-    args, remainingArgs = parseArguments()
+def getResolvedOptions(args):
+    
+    bankOptions = dict(defaultOptions)
+    if os.path.isfile('~/.bankconfigrc'):
+        newOptions = getOptionDictFromIniFile('~/.bankconfigrc')
+        bankOptions = mergeOptionDicts(bankOptions, newOptions)
 
     # Get the config file path
-    if args.cwd != "Automatic":
+    if getattr(args, 'cwd', 'auto') != 'auto':
         configFile = os.path.abspath(os.path.join(args.cwd, 'bankconfig.ini'))
     else:
-        configFile = os.path.abspath('bankconfig.ini')
+        configFile = os.path.abspath('bankconfig.ini')    
+    if os.path.isfile(configFile):
+        newOptions = getOptionDictFromIniFile(configFile)
+        bankOptions = mergeOptionDicts(bankOptions, newOptions)
 
-    command = args.command
-    syncFilePath = getSetting(args.syncfile, configFile, 'syncfile', 'syncfile.wl')
+    passedInOptions = {
+        'General' : {
+            'cwd' : getattr(args, 'cwd', 'auto'),
+            'syncfile' : getattr(args, 'syncfile', 'auto'),
+            'verbosity' : getattr(args, 'verbosity', autoNum),
+            'colorize' :  getattr(args, 'colorize', 'auto'),
+        },
+        'sync' : {
+            'matching' : getattr(args, 'matching', 'auto')
+        }
+    }
+    
+    bankOptions = mergeOptionDicts(bankOptions, passedInOptions)
+    bankOptions['General']['verbosity'] = int(bankOptions['General']['verbosity'])
+    return bankOptions
+
+
+def main():
+    global args, remainingArgs, syncFilePath, syncRepoPath, cwd, verbosity, resolvedOpts
+    args, remainingArgs = parseArguments()
+
+    command = args.subparser_name
+    resolvedOpts = getResolvedOptions(args)
+    syncFilePath = resolvedOpts['General']['syncfile']
     syncRepoPath = os.path.dirname(os.path.abspath(syncFilePath))
-    cwd = getSetting(args.cwd, configFile, 'cwd', '.')
-    matching = getSetting(args.matching, configFile, 'matching', 'closetimestamp')
-    verbosity= getSetting(args.verbosity, configFile, 'verbosity', 2)
+    cwd = resolvedOpts['General']['cwd']
+    verbosity = resolvedOpts['General']['verbosity']
+    colorize = resolvedOpts['General']['colorize']
     set_defaults('verbosity', verbosity)
-    set_defaults('dryRun', args.dryRun)
-
+    set_defaults('dryrun', args.dryrun)
+    
     dispatchCommand(command)
 
 

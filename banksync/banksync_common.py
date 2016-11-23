@@ -19,7 +19,7 @@ import textwrap
 # Defines
 # --------------------------------------------------------------------------------------------------------------------------
 
-AutomaticNum = -1       # an arbitrary negative number to stand in for Automatic in an option
+autoNum = -1       # an arbitrary negative number to stand in for 'auto' in a numerical option
 
 
 
@@ -39,16 +39,6 @@ def dateFromTimeStamp(ts):
 
 def isSha1Str(s):
     return True if re.match( r'^[0-9a-fA-F]{40}$', s) else False
-
-def getSetting(val, configFile, var, default):
-    if val != 'Automatic' and val != AutomaticNum:
-        return val
-    try:
-        config = ConfigParser.RawConfigParser()
-        config.read(configFile)
-        return config.get('Bank', var)
-    except:
-        return default
 
 def correctlyQuoteArg(arg):
     """quote any string that has white space in it"""
@@ -73,7 +63,7 @@ def escape_ansi(line):
 # --------------------------------------------------------------------------------------------------------------------------
 
 def isAutomatic(val):
-    return val == "Automatic" or val == AutomaticNum
+    return val == "auto" or val == autoNum or val is None
 
 def iniParserToOptionDict(parser):
     d = {}
@@ -217,7 +207,7 @@ def dictFromCurrentRepoState(path, **kwargs):
     newRepoInfo["path"] = path
     succeeded = True
     try:
-        res = gitCommand("git log HEAD -n 1 --format=format:'\"sha\" : \"%H\",%n\"UnixTimeStamp\" : \"%at\",%n\"date\" : \"%ad\",%n\"author\" : \"%an\"'", **opts)
+        res = gitCommand("git log HEAD -n 1 --date=iso --format=format:'\"sha\" : \"%H\",%n\"UnixTimeStamp\" : \"%at\",%n\"date\" : \"%ad\",%n\"author\" : \"%an\"'", **opts)
         props = json.loads('{'+res["stdout"]+'}', object_pairs_hook=OrderedDict)
         newRepoInfo.update(props)
 

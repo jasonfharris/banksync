@@ -39,7 +39,7 @@
 >>> ans = execute4('git commit -am "committing sparrow"', cwd='repoBird')
 >>> sparrowHash = execute4('git rev-parse HEAD', cwd='repoBird')[1].strip()
 
->>> ans = execute4('banksync/banksync.py generateSyncFile --syncfile repoSyncFile/syncfile.wl repoFish repoBird')
+>>> ans = execute4('banksync/banksync.py createSyncfile --syncfile repoSyncFile/syncfile.wl repoFish repoBird')
 >>> ans = execute4('git add syncfile.wl', cwd='repoSyncFile')
 >>> ans = execute4('git commit -am "syncPoint1"', cwd='repoSyncFile')
 >>> syncPoint1 = execute4('git rev-parse HEAD', cwd='repoSyncFile')[1].strip()
@@ -57,7 +57,7 @@
 >>> ans = execute4('git commit -am "committing hawk"', cwd='repoBird')
 >>> hawkHash = execute4('git rev-parse HEAD', cwd='repoBird')[1].strip()
 
->>> ans = execute4('banksync/banksync.py createSyncPoint --syncfile repoSyncFile/syncfile.wl')
+>>> ans = execute4('banksync/banksync.py recordRepos --syncfile repoSyncFile/syncfile.wl')
 >>> ans = execute4('git add syncfile.wl', cwd='repoSyncFile')
 >>> ans = execute4('git commit -am "syncPoint2"', cwd='repoSyncFile')
 >>> syncPoint2 = execute4('git rev-parse HEAD', cwd='repoSyncFile')[1].strip()
@@ -75,7 +75,7 @@
 >>> ans = execute4('git commit -am "committing eagle"', cwd='repoBird')
 >>> eagleHash = execute4('git rev-parse HEAD', cwd='repoBird')[1].strip()
 
->>> ans = execute4('banksync/banksync.py createSyncPoint --syncfile repoSyncFile/syncfile.wl')
+>>> ans = execute4('banksync/banksync.py recordRepos --syncfile repoSyncFile/syncfile.wl')
 >>> ans = execute4('git add syncfile.wl', cwd='repoSyncFile')
 >>> ans = execute4('git commit -am "syncPoint3"', cwd='repoSyncFile')
 >>> syncPoint3 = execute4('git rev-parse HEAD', cwd='repoSyncFile')[1].strip()
