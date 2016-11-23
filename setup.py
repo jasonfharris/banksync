@@ -1,4 +1,5 @@
 from distutils.core import setup
+import re
 
 try:
     import pypandoc
@@ -6,17 +7,23 @@ try:
 except ImportError:
     long_description = open('README.md').read()
 
+version = re.search(
+    '^__version__\s*=\s*"(.*)"',
+    open('banksync/banksync.py').read(),
+    re.M
+    ).group(1)
+
 setup(
     name = 'banksync',
     packages = ['banksync'], # this must be the same as the name above
-    version = '0.7.0',
+    version = version,
     description = 'A library for manipulating banks of git repositories',
     long_description = long_description,
     author = 'Jason Harris',
     author_email = 'jason@jasonfharris.com',
     license='MIT',
     url = 'https://github.com/jasonfharris/banksync',
-    download_url = 'https://github.com/jasonfharris/banksync/tarball/0.7.0',
+    download_url = 'https://github.com/jasonfharris/banksync/tarball/'+version,
     keywords = ['execute', 'shell', 'system', 'git', 'submodule'],
     classifiers=[
         'Development Status :: 4 - Beta',

@@ -13,8 +13,8 @@ from collections import OrderedDict
 from sysexecute import *
 from banksync_common import *
 
+__version__ = "0.7.1"
 
-scriptname = os.path.basename(sys.argv[0])
 
 # --------------------------------------------------------------------------------------------------------------------------
 # Defines
@@ -51,28 +51,28 @@ config file `bankconfig.ini` so they do not need to be specified each time on th
 
 Example usage:
 
-  {scriptname} sync --syncfile syncfile.wl
+  bank sync --syncfile syncfile.wl
 
 This would checkout / update the repos given in the syncfile to the states given in the syncfile.
 
-  {scriptname} sync --syncfile syncfile.wl --cwd ../other/dir
+  bank sync --syncfile syncfile.wl --cwd ../other/dir
 
 This would checkout / update the repos given in the syncfile to the states given in the syncfile
 (but the path to the repos are prefixed by the value of cwd).
 
-  {scriptname} createSyncPoint --syncfile syncfile.wl
+  bank createSyncPoint --syncfile syncfile.wl
 
 This would alter the revisions stored in the syncfile.wl to match the current revisions of the referenced repositories.
 
-  {scriptname} generateSyncFile --syncfile syncfile.wl repo1 repo2 ... repoN
+  bank generateSyncFile --syncfile syncfile.wl repo1 repo2 ... repoN
 
 This would generate or overwrite the syncfile.wl to contain sync points for the current states of repo1 repo2 ... repoN
 
-  {scriptname} gitstatus --syncfile syncfile.wl
+  bank gitstatus --syncfile syncfile.wl
 
 Perform gitstatus and list the results on each of the repositories specified in the syncfile.wl
 
-  {scriptname} sync
+  bank sync
 
 Use the syncfile specified in the  and list the results on each of the repositories specified in the syncfile.wl
 ''')
@@ -87,11 +87,21 @@ def parseArguments():
     parser.add_argument("--matching", metavar="MATCH", help=stringWithVars('specify how we can recognize a revision "match": {matchingOpts}'), choices=matchingOpts, default="Automatic")
     parser.add_argument("--verbosity", metavar="NUM", help="Specify the level of feedback detail for the install", default="Automatic")
     parser.add_argument('--dryRun',dest='dryRun',action='store_true', help="Print what would happen instead of executing the deploy")
+    parser.add_argument('--version',dest='version',action='store_true', help="Show the version number of the banksync tool")
     parser.set_defaults(dryrun=False)
+    parser.set_defaults(version=False)
     argcomplete.autocomplete(parser)
+
+    if len(sys.argv)==1:
+        parser.print_help()
+        sys.exit(1)
 
     args, remainingArgs = parser.parse_known_args()
     remainingArgs = [correctlyQuoteArg(arg) for arg in remainingArgs]
+    if args.version:
+        printWithVars1("banksync {__version__}. Author: Jason F Harris.")
+        sys.exit(0)
+    
     return args, remainingArgs
 
 
