@@ -16,15 +16,18 @@
 >>> ans = execute4('rm -rf repoFish')
 >>> ans = execute4('mkdir repoFish')
 >>> ans = execute4('git init', cwd='repoFish')
+>>> ans = execute4('git remote add origin https://github.com/testbank/repoFish.git', cwd='repoFish')
 
 >>> ans = execute4('rm -rf repoBird')
 >>> ans = execute4('mkdir repoBird')
 >>> ans = execute4('git init', cwd='repoBird')
+>>> ans = execute4('git remote add origin https://github.com/testbank/repoBird.git', cwd='repoBird')
 
 >>> ans = execute4('rm -rf repoSyncFile')
 >>> ans = execute4('mkdir repoSyncFile')
 >>> ans = execute4('git init', cwd='repoSyncFile')
 >>> ans = execute4('echo "[Bank]\ncwd=..\nsyncFile=syncfile.wl" > repoSyncFile/bankconfig.ini')
+>>> ans = execute4('git remote add origin https://github.com/testbank/animalsRepoSync.git', cwd='repoSyncFile')
 
 # Filling Repos Sync Point 1
 
@@ -39,7 +42,7 @@
 >>> sparrowHash = execute4('git rev-parse HEAD', cwd='repoBird')[1].strip()
 
 >>> ans = execute4('../banksync/banksync.py generateSyncFile repoFish repoBird', cwd='repoSyncFile')
->>> ans = execute4('git add syncfile.wl', cwd='repoSyncFile')
+>>> ans = execute4('git add syncfile.wl bankconfig.ini', cwd='repoSyncFile')
 >>> ans = execute4('git commit -am "syncPoint1"', cwd='repoSyncFile')
 >>> syncPoint1 = execute4('git rev-parse HEAD', cwd='repoSyncFile')[1].strip()
 >>> time.sleep(4)
@@ -57,7 +60,7 @@
 >>> hawkHash = execute4('git rev-parse HEAD', cwd='repoBird')[1].strip()
 
 >>> ans = execute4('../banksync/banksync.py createSyncPoint', cwd='repoSyncFile')
->>> ans = execute4('git add syncfile.wl', cwd='repoSyncFile')
+>>> ans = execute4('git add syncfile.wl bankconfig.ini', cwd='repoSyncFile')
 >>> ans = execute4('git commit -am "syncPoint2"', cwd='repoSyncFile')
 >>> syncPoint2 = execute4('git rev-parse HEAD', cwd='repoSyncFile')[1].strip()
 >>> time.sleep(4)
@@ -75,7 +78,7 @@
 >>> eagleHash = execute4('git rev-parse HEAD', cwd='repoBird')[1].strip()
 
 >>> ans = execute4('../banksync/banksync.py createSyncPoint', cwd='repoSyncFile')
->>> ans = execute4('git add syncfile.wl', cwd='repoSyncFile')
+>>> ans = execute4('git add syncfile.wl bankconfig.ini', cwd='repoSyncFile')
 >>> ans = execute4('git commit -am "syncPoint3"', cwd='repoSyncFile')
 >>> syncPoint3 = execute4('git rev-parse HEAD', cwd='repoSyncFile')[1].strip()
 
