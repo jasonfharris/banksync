@@ -92,15 +92,21 @@ def parseArguments():
     parser.set_defaults(version=False)
     argcomplete.autocomplete(parser)
 
+    def printVersionAndExit():
+        printWithVars1("banksync {__version__}. Author: Jason F Harris.\nhttps://github.com/jasonfharris/banksync")
+        sys.exit(0)
+
     if len(sys.argv)==1:
         parser.print_help()
         sys.exit(1)
 
+    if len(sys.argv)==2 and sys.argv[1] == '--version':
+        printVersionAndExit()
+
     args, remainingArgs = parser.parse_known_args()
     remainingArgs = [correctlyQuoteArg(arg) for arg in remainingArgs]
     if args.version:
-        printWithVars1("banksync {__version__}. Author: Jason F Harris.")
-        sys.exit(0)
+        printVersionAndExit()
     
     return args, remainingArgs
 
