@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 import re
 
 try:
@@ -44,7 +44,5 @@ setup(
         'Programming Language :: Python :: 2.7'
         ],
     install_requires = ['argparse', 'argcomplete', 'sysexecute', 'configparser'],
-    entry_points = {
-        "console_scripts": ['bank = banksync.banksync:main']
-        }
+    scripts= ['bin/bank']
 )
