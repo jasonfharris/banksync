@@ -127,6 +127,9 @@ def commandSync():
         repoInfo = syncDict[repoName]
         absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
         repoString = paddedRepoName(repoName,syncDict)
+        greenRepoString  = colored(repoString, 'green')
+        redRepoString    = colored(repoString, 'red')
+        yellowRepoString = colored(repoString, 'yellow')
         if not checkForRepo(repoString, absRepoPath):
             allFound = False
             continue
@@ -141,7 +144,8 @@ def commandSync():
                 res = gitCommand("git checkout -B {defaultSyncPointBranchName} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
                 if res["code"] == 0:
                     revNum = getRevNumber(hash, absRepoPath)
-                    printWithVars2("{repoString}: successfully checked out revision by {method}: {hash} (revision number {revNum})")
+                    shortHash = hash[0:12]
+                    printWithVars2("{greenRepoString}: successfully checked out revision by {method}: {shortHash} (revision number {revNum})")
                     found = True
                     break
                 printWithVars3("{repoString}: failed to check out revision by {method}: {hash}")
@@ -161,7 +165,7 @@ def commandSync():
                                 res = gitCommand("git checkout -B {branch} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
                                 if res["code"] == 0:
                                     revNum = getRevNumber(hash, absRepoPath)
-                                    printWithVars2("{repoString}: successfully checked out revision by {method}: {ts} ({date}) {hash} (revision number {revNum})")
+                                    printWithVars2("{greenRepoString}: successfully checked out revision by {method}: {ts} ({date}) {hash} (revision number {revNum})")
                                     found = True
                                     break
                         else:
@@ -173,7 +177,7 @@ def commandSync():
                                 res = gitCommand("git checkout -B {branch} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
                                 if res["code"] == 0:
                                     revNum = getRevNumber(hash, absRepoPath)
-                                    printWithVars2("{repoString}: warning checking out revision by closest timestamp.", "red")
+                                    printWithVars2("{yellowRepoString}: warning checking out revision by closest timestamp.", "red")
                                     printWithVars2("       requested {method}: {ts} ({date})")
                                     printWithVars2("       used      {method}: {closestTimestamp} ({closestDate}) {hash} (revision number {revNum})")
                                     found = True
@@ -183,7 +187,7 @@ def commandSync():
 
         if not found:
             allFound = False
-            printWithVars2("{repoString}: failed to check out specified revision by any method.")
+            printWithVars2("{redRepoString}: failed to check out specified revision by any method.")
     if allFound:
         print colored("success! all repos checked out to the specified sync state.", 'green')
     else:
@@ -205,16 +209,18 @@ def commandSyncCreateSyncPoint():
         repoInfo = syncDict[repoName]
         absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
         repoString = paddedRepoName(repoName,syncDict)
+        greenRepoString = colored(repoString, 'green')
+        redRepoString   = colored(repoString, 'red')
         if not checkForRepo(repoString, absRepoPath):
             anyFailures = True
             continue
         (worked, newRepoInfo) = dictFromCurrentRepoState(repoInfo["path"], cwd=cwd, verbosity=verbosity)
         if worked:
-            hash = newRepoInfo["sha"]
+            shortHash = newRepoInfo["sha"][0:12]
             date = newRepoInfo["date"]
-            printWithVars2("{repoName}: recording bank sync state of {hash}, {date}.")
+            printWithVars2("{greenRepoString}: recording bank sync state of {shortHash}, {date}.")
         else:
-            printWithVars2("failure! not able to get the status of {repoName} at {absRepoPath}", 'red')
+            printWithVars2("{redRepoString}: failure! not able to get the status of {repoName} at {absRepoPath}", 'red')
             anyFailures = True
         newSyncDict[repoName] = newRepoInfo
     
@@ -244,9 +250,9 @@ def commandGenerateSyncFile():
             continue
         (worked, newRepoInfo) = dictFromCurrentRepoState(repo, cwd=cwd, verbosity=verbosity)
         if worked:
-            hash = newRepoInfo["sha"]
+            shortHash = newRepoInfo["sha"][0:12]
             date = newRepoInfo["date"]
-            printWithVars2("{repoName}: recording bank sync state of {hash}, {date}.")
+            printWithVars2("{repoName}: recording repository state of {shortHash}, {date}.")
         else:
             printWithVars2("failure! not able to get the status of {repoName} at {absRepoPath}", 'red')
             anyFailures = True
