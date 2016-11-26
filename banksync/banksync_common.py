@@ -14,6 +14,15 @@ import configparser
 import textwrap
 
 
+
+# --------------------------------------------------------------------------------------------------------------------------
+# Defines
+# --------------------------------------------------------------------------------------------------------------------------
+
+AutomaticNum = -1       # an arbitrary negative number to stand in for Automatic in an option
+
+
+
 # --------------------------------------------------------------------------------------------------------------------------
 # Utilities
 # --------------------------------------------------------------------------------------------------------------------------
@@ -32,7 +41,7 @@ def isSha1Str(s):
     return True if re.match( r'^[0-9a-fA-F]{40}$', s) else False
 
 def getSetting(val, configFile, var, default):
-    if val != 'Automatic':
+    if val != 'Automatic' and val != AutomaticNum:
         return val
     try:
         config = ConfigParser.RawConfigParser()
@@ -119,8 +128,6 @@ def checkForRepo(repoString, absRepoPath):
         printWithVars1("{repoString} : {absRepoPath} is not a git repository.", 'red')
         return False
     return True
-
-
 
 def checkForSyncRepoFile(syncFilePath):
     if not os.path.isfile(syncFilePath):

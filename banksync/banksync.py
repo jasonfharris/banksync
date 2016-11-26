@@ -85,7 +85,7 @@ def parseArguments():
     parser.add_argument("--syncfile", metavar="SYNCFILE", help="the path to the syncfile", default='Automatic')
     parser.add_argument("--cwd", metavar="CWD", help="prefix / change the working directory for the repos in the sync file", default="Automatic")
     parser.add_argument("--matching", metavar="MATCH", help=stringWithVars('specify how we can recognize a revision "match": {matchingOpts}'), choices=matchingOpts, default="Automatic")
-    parser.add_argument("--verbosity", metavar="NUM", help="Specify the level of feedback detail for the install", default="Automatic")
+    parser.add_argument("--verbosity", metavar="NUM", help="Specify the level of feedback detail for the install", type=int, default=AutomaticNum)
     parser.add_argument('--dryRun',dest='dryRun',action='store_true', help="Print what would happen instead of executing the deploy")
     parser.add_argument('--version',dest='version',action='store_true', help="Show the version number of the banksync tool")
     parser.set_defaults(dryrun=False)
