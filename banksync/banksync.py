@@ -141,7 +141,7 @@ def commandSync():
                 res = gitCommand("git checkout -B {defaultSyncPointBranchName} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
                 if res["code"] == 0:
                     revNum = getRevNumber(hash, absRepoPath)
-                    printWithVars2("{repoString}: succesfully checked out revision by {method}: {hash} (revision number {revNum})")
+                    printWithVars2("{repoString}: successfully checked out revision by {method}: {hash} (revision number {revNum})")
                     found = True
                     break
                 printWithVars3("{repoString}: failed to check out revision by {method}: {hash}")
@@ -161,7 +161,7 @@ def commandSync():
                                 res = gitCommand("git checkout -B {branch} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
                                 if res["code"] == 0:
                                     revNum = getRevNumber(hash, absRepoPath)
-                                    printWithVars2("{repoString}: succesfully checked out revision by {method}: {ts} ({date}) {hash} (revision number {revNum})")
+                                    printWithVars2("{repoString}: successfully checked out revision by {method}: {ts} ({date}) {hash} (revision number {revNum})")
                                     found = True
                                     break
                         else:
