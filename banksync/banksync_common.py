@@ -53,6 +53,9 @@ def wrapParagraphs(str):
     wrappedParas = [textwrap.fill(para, 80) for para in paras]
     return "\n\n".join(wrappedParas)
 
+def escape_ansi(line):
+    ansi_escape = re.compile(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]')
+    return ansi_escape.sub('', line)
 
 
 
