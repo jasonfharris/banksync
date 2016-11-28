@@ -10,7 +10,7 @@ import json
 from collections import OrderedDict
 from sysexecute import *
 import datetime
-import ConfigParser
+import configparser
 import textwrap
 
 
@@ -52,6 +52,44 @@ def wrapParagraphs(str):
     paras = str.split('\n\n')
     wrappedParas = [textwrap.fill(para, 80) for para in paras]
     return "\n\n".join(wrappedParas)
+
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------
+# INI Config Handling
+# --------------------------------------------------------------------------------------------------------------------------
+
+def isAutomatic(val):
+    return val == "Automatic" or val == AutomaticNum
+
+def iniParserToOptionDict(parser):
+    d = {}
+    for sec in parser:
+        secd = {}
+        for key in parser[sec]:
+            secd[key]= parser[sec][key]
+        d[sec] = secd
+    return d
+
+def getOptionDictFromIniFile(configFile):
+    config = configparser.ConfigParser()
+    config.read(configFile)
+    return iniParserToOptionDict(config)
+
+def mergeOptionDicts(d1,d2):
+    """Merge in ini d2 into a copy of d1. Don't overwrite values when the value is 'none'"""
+    combined = dict(d1)
+    for sec in d2:
+        for key in d2[sec]:
+            val = d2[sec][key]
+            if not isAutomatic(val):
+                if sec in combined:
+                    combined[sec][key] = val
+                else:
+                    combined[sec] = {key:val}
+    return combined
+
 
 
 

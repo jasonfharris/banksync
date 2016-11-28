@@ -1,0 +1,32 @@
+# --------------------------------------------------------------------------------------------------------------------------
+# Test banksync_common
+# --------------------------------------------------------------------------------------------------------------------------
+
+>>> import sys, os, time
+>>> from sysexecute import *
+>>> sys.path.append(os.path.abspath('.'))
+>>> sys.path.append(os.path.abspath('..'))
+>>> from banksync import *
+
+>>> import configparser
+>>> parser = configparser.ConfigParser()
+>>> parser.read_dict({
+...               'section1': {'key1': 'value1', 'key2': 'value2', 'key3': 'value3'},
+...               'section2': {'keyA': 'valueA', 'keyB': 'valueB', 'keyC': 'valueC'},
+...               'section3': {'foo': 'x', 'bar': 'y', 'baz': 'z'} })
+
+>>> iniDict = iniParserToOptionDict(parser)
+>>> iniDict
+{u'DEFAULT': {}, u'section3': {u'bar': u'y', u'foo': u'x', u'baz': u'z'}, u'section2': {u'keyc': u'valueC', u'keyb': u'valueB', u'keya': u'valueA'}, u'section1': {u'key3': u'value3', u'key2': u'value2', u'key1': u'value1'}}
+
+>>> newDict = nn = {u'section1': {u'key1': 'auto', u'key2': u'fish'}, u'section2': {u'keya': u'bird', u'keyb': 'auto'}}
+>>> mergeOptionDicts(iniDict, newDict)
+{u'DEFAULT': {}, u'section3': {u'bar': u'y', u'foo': u'x', u'baz': u'z'}, u'section2': {u'keyc': u'valueC', u'keyb': u'valueB', u'keya': u'bird'}, u'section1': {u'key3': u'value3', u'key2': u'fish', u'key1': u'value1'}}
+
+>>> escape_ansi(colored("hello",'red'))
+'hello'
+
+>>> correctlyQuoteArg('onewholeitem')
+'onewholeitem'
+>>> correctlyQuoteArg('an item with gaps')
+'"an item with gaps"'
