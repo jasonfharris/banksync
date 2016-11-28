@@ -1,8 +1,7 @@
 # --------------------------------------------------------------------------------------------------------------------------
-# Test sysexecute execute
+# Test banksync functionality with config file
 # --------------------------------------------------------------------------------------------------------------------------
 
-import sysexecute
 >>> import sys, os, time
 >>> from sysexecute import *
 >>> sys.path.append(os.path.abspath('.'))
