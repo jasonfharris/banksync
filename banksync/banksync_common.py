@@ -83,22 +83,23 @@ def checkForRepo(repoString, absRepoPath):
 
 def checkForSyncRepoFile(syncFilePath):
     if not os.path.isfile(syncFilePath):
+        absSyncFilePath = os.path.abspath(syncFilePath)
         printWithVars1("failure! could not locate the sync file at {absSyncFilePath}.", 'red')
         sys.exit(1)
 
 def checkForSyncRepoDir(syncFilePath, existing = True):
     absSyncFilePath = os.path.abspath(syncFilePath)
-    syncStateRepoPath = os.path.dirname(absSyncFilePath)
+    absSyncRepoPath = os.path.dirname(absSyncFilePath)
 
-    if not os.path.isdir(syncStateRepoPath):
-        printWithVars1("failure! could not locate the sync repo dir at {syncStateRepoPath}.", 'red')
+    if not os.path.isdir(absSyncRepoPath):
+        printWithVars1("failure! could not locate the syncrepo dir at {absSyncRepoPath}.", 'red')
         sys.exit(1)
 
-    if not os.path.isdir(os.path.join(syncStateRepoPath,".git")):
+    if not os.path.isdir(os.path.join(absSyncRepoPath,".git")):
         if existing:
-            printWithVars1("failure! {syncStateRepoPath} is not a git repository consisting of syncfile revisions.", 'red')
+            printWithVars1("failure! {absSyncRepoPath} is not a git repository consisting of syncfile revisions.", 'red')
         else:
-            printWithVars1("failure! {syncStateRepoPath} is not a git repository.", 'red')        
+            printWithVars1("failure! {absSyncRepoPath} is not a git repository.", 'red')        
         sys.exit(1)
 
 def checkForSyncRepo(syncFilePath):
