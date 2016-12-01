@@ -100,14 +100,13 @@ The syncfile should lie inside a git repo (the syncrepo). Whenever we want to re
 
 So let us add some content to repoBird in our example and then commit this change.
 
-    echo "toucan" >> ../repoBird/Bird.txt
-    pushd ../repoBird
+    cd  ~/animals/repoBird
     echo "toucan" >> Bird.txt
     git commit -am "committing toucan"
-    popd
 
 So now we can update the syncfile with the state of the current repos in the bank:
 
+    cd ~/animals/animalsRepoSync/
     bank recordRepos
 
 The contents of our syncfile will now be something like:
@@ -254,13 +253,13 @@ We can use `bank` to perform a git command on each repository in the bank. All g
 
     bank git status --syncfile syncfile.wl
 
-Will perform a git `status` operation on each of the repositories in the bank and print the results to stdout.
+Will perform a `git status` operation on each of the repositories in the bank and print the results to stdout.
 
-If you use `gitall` instead of `git` the git command will also be run in the syncrepo.
+If you use `gitall` instead of `git` command, then the git command will also be run in the syncrepo.
 
     bank gitall status --syncfile syncfile.wl
 
-Will perform a git `status` operation on each of the repositories in the bank and print the results to stdout.
+Will perform a `git status` operation on each of the repositories in the bank and print the results to stdout.
 
 ## Testing
 
