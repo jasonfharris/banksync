@@ -295,7 +295,7 @@ def commandSync():
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
         absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
-        repoString = paddedRepoName(repoName,syncDict)
+        repoString = paddedRepoName(repoName, syncDict.keys())
         greenRepoString  = colored(repoString, 'green')
         redRepoString    = colored(repoString, 'red')
         yellowRepoString = colored(repoString, 'yellow')
@@ -377,7 +377,7 @@ def commandRecordRepos():
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
         absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
-        repoString = paddedRepoName(repoName,syncDict)
+        repoString = paddedRepoName(repoName, syncDict.keys())
         greenRepoString = colored(repoString, 'green')
         redRepoString   = colored(repoString, 'red')
         if not checkForRepo(repoString, absRepoPath):
@@ -411,9 +411,12 @@ def commandCreateSyncfile():
     checkForSyncRepoDir(syncFilePath, existing = False)
     newSyncDict = OrderedDict()
     anyFailures = False
-    for repo in remainingArgs:
+    repoNames = remainingArgs
+    for repo in repoNames:
         absRepoPath = getAbsRepoPath(repo, cwd)
         repoName = os.path.basename(absRepoPath)
+        repoString = paddedRepoName(repoName, repoNames)
+        greenRepoString = colored(repoString, 'green')
         if not checkForRepo(repoName, absRepoPath):
             anyFailures = True
             continue
@@ -421,7 +424,7 @@ def commandCreateSyncfile():
         if worked:
             shortHash = newRepoInfo["sha"][0:12]
             date = newRepoInfo["date"]
-            printWithVars2("{repoName}: recording repository state of {shortHash}, {date}.")
+            printWithVars2("{greenRepoString}: recording repository state of {shortHash}, {date}.")
         else:
             printWithVars2("failure! not able to get the status of {repoName} at {absRepoPath}", 'red')
             anyFailures = True
@@ -461,7 +464,7 @@ def commandClone():
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
         absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
-        repoString = paddedRepoName(repoName,syncDict)
+        repoString = paddedRepoName(repoName, syncDict.keys())
         greenRepoString = colored(repoString, 'green')
         redRepoString   = colored(repoString, 'red')
         if not "cloneURL" in repoInfo:

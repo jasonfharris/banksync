@@ -104,9 +104,9 @@ def getAbsRepoPath(path, cwd = "."):
         return os.path.abspath(path)
     return os.path.abspath(os.path.join(cwd, path))
 
-def paddedRepoName(repoName, syncDict):
+def paddedRepoName(repoName, names):
     maxRepoNameLength = 0                     # maxRepoNameLength
-    for name in syncDict:
+    for name in names:
         maxRepoNameLength = max(maxRepoNameLength, len(name))
     return repoName.ljust(maxRepoNameLength+1)
 
