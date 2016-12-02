@@ -42,11 +42,8 @@ defaultOptions = {
 }
 
 sync_commands = ['sync', 'recordRepos', 'createSyncfile', 'bisect', 'clone', 'git', 'gitall']
-git_commands = ['reset', 'log', 'status', 'branch', 'checkout', 'commit', 'tag', 'diff',
-                   'fecth', 'push', 'pull', 'prune', 'gc', 'fsck', 'ls-files', 'ls-remote', 'ls-tree']
-commands = sync_commands + git_commands
-matchingOptionValues = ['shaOnly', 'timestamp', 'closetimestamp']
-colorizeOptionValues = ['yes', 'no']
+approved_git_commands = ['reset', 'log', 'status', 'branch', 'checkout', 'commit', 'tag', 'diff', 'fetch',
+                         'push', 'pull', 'prune', 'gc', 'fsck', 'ls-files', 'ls-remote', 'ls-tree']
 
 # This list was culled from `git help -a`
 allGitCommands = [
@@ -84,6 +81,9 @@ allGitCommands = [
   'credential-cache--daemon',  'http-push',                 'pack-refs',                 'shell',
 ]
 
+commands = sync_commands + allGitCommands
+matchingOptionValues = ['shaOnly', 'timestamp', 'closetimestamp']
+colorizeOptionValues = ['yes', 'no']
 
 
 # --------------------------------------------------------------------------------------------------------------------------
@@ -205,7 +205,7 @@ gitallCmdDescription = gitallCmdHelp
 gitallCmdEpilog = wrapParagraphs('''
 
 The common git commands which make sense have been "approved" are
-{git_commands}. (Actually any git command can be used but so far only those common git
+{approved_git_commands}. (Actually any git command can be used but so far only those common git
 commands have been "approved" as making sense in the setting of banksync. Some other git commands definitely do not make
 sense such as `git rebase --interactive` since the bank command is not interactive. Command completion on the command
 line only works for the common commands.
@@ -248,9 +248,9 @@ def parseArguments():
     parser_cloneCmd = addSubparser('clone')
     parser_bisectCmd = addSubparser('bisect')
     parser_gitCmd = addSubparser('git')
-    parser_gitCmd.add_argument("gitcmd", metavar="GITCMD", nargs='?', help=stringWithVars("perform one of {git_commands} on all the repos in the bank."), choices=git_commands, default='status')
+    parser_gitCmd.add_argument("gitcmd", metavar="GITCMD", nargs='?', help=stringWithVars("perform one of {approved_git_commands} on all the repos in the bank."), choices=allGitCommands, default='status')
     parser_gitallCmd = addSubparser('gitall')
-    parser_gitallCmd.add_argument("gitcmd", metavar="GITCMD", nargs='?', help=stringWithVars("perform one of {git_commands} on all the repos in the bank including the syncrepo."), choices=git_commands, default='status')
+    parser_gitallCmd.add_argument("gitcmd", metavar="GITCMD", nargs='?', help=stringWithVars("perform one of {approved_git_commands} on all the repos in the bank including the syncrepo."), choices=allGitCommands, default='status')
 
     argcomplete.autocomplete(parser)
 
@@ -497,7 +497,7 @@ def commandClone():
 # --------------------------------------------------------------------------------------------------------------------------
 
 def distributeGitCommand(command, includeSyncRepo=False):
-    if not command in git_commands:
+    if not command in approved_git_commands:
         yellowWarning = colored("warning", 'yellow')
         printWithVars1("{yellowWarning}: the git command `{command}` might not make sense being applied non-interactively to each repo in the bank. Use at your own discretion.")
     if not command in allGitCommands:
