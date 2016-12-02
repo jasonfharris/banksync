@@ -159,12 +159,12 @@ def gitCommand(cmdStr, verbosityThreshold = 3, **kwargs):
     return res
 
 def getRevNumber(sha, absRepoPath):
-        res = gitCommand("git rev-list HEAD --count --first-parent", 4, cwd=absRepoPath)
-        try:
-            num = int(res["stdout"].strip())
-            return str(num)
-        except:
-            return "(unknown)"
+    res = gitCommand("git rev-list HEAD --count --first-parent", 4, cwd=absRepoPath)
+    try:
+        num = int(res["stdout"].strip())
+        return str(num)
+    except:
+        return "(unknown)"
 
 
 
