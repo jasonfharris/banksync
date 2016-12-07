@@ -445,9 +445,12 @@ def commandCreateSyncfile():
 # --------------------------------------------------------------------------------------------------------------------------
 
 def commandBisect():
+    currentRev = getCurrentRevHash(syncRepoPath)
     bisectCmd = "git bisect " + " ".join(remainingArgs)
     res = gitCommand(bisectCmd, 2, cwd=syncRepoPath, verbosity=verbosity);
-    commandSync()
+    newRev = getCurrentRevHash(syncRepoPath)
+    if newRev != currentRev:
+        commandSync()
 
 
 

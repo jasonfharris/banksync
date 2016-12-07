@@ -167,6 +167,12 @@ def getRevNumber(sha, absRepoPath):
     except:
         return "(unknown)"
 
+def getCurrentRevHash(absRepoPath):
+    res = gitCommand("git log HEAD -n 1 --date=iso --format=format:'%H'", 4, cwd=absRepoPath, verbosity=1)
+    if isSha1Str(res['stdout']):
+        return res['stdout']
+    return '0'*40
+
 
 
 # --------------------------------------------------------------------------------------------------------------------------
