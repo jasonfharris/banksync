@@ -44,6 +44,8 @@ defaultOptions = {
 sync_commands = ['sync', 'recordRepos', 'createSyncfile', 'bisect', 'clone', 'git', 'gitall']
 approved_git_commands = ['reset', 'log', 'status', 'branch', 'checkout', 'commit', 'tag', 'diff', 'fetch',
                          'push', 'pull', 'prune', 'gc', 'fsck', 'ls-files', 'ls-remote', 'ls-tree']
+                         
+bisectSubCommands = ['start', 'bad', 'new', 'good', 'old', 'terms', 'skip', 'reset', 'visualize', 'replay', 'log', 'run']
 
 # This list was culled from `git help -a`
 allGitCommands = [
@@ -247,6 +249,7 @@ def parseArguments():
     parser_createSyncfileCmd = addSubparser('createSyncfile')
     parser_cloneCmd = addSubparser('clone')
     parser_bisectCmd = addSubparser('bisect')
+    parser_bisectCmd.add_argument("bisectcmd", metavar="BISECTCMD", nargs='?', help=stringWithVars("the bisect subcommand one of {bisectSubCommands}."), choices=bisectSubCommands, default='log')
     parser_gitCmd = addSubparser('git')
     parser_gitCmd.add_argument("gitcmd", metavar="GITCMD", nargs='?', help=stringWithVars("perform one of {approved_git_commands} on all the repos in the bank."), choices=allGitCommands, default='status')
     parser_gitallCmd = addSubparser('gitall')
@@ -444,13 +447,59 @@ def commandCreateSyncfile():
 # command "bisect"
 # --------------------------------------------------------------------------------------------------------------------------
 
-def commandBisect():
+def commandBisect(command):
+    checkForSyncRepo(syncFilePath)
+    syncDict = loadSyncFileAsDict(syncFilePath)
     currentRev = getCurrentRevHash(syncRepoPath)
-    bisectCmd = "git bisect " + " ".join(remainingArgs)
+    anyFailures = False
+
+    if command == 'start':
+        restoreDict = OrderedDict()
+        for repoName in syncDict:
+            repoInfo = syncDict[repoName]
+            absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
+            repoString = paddedRepoName(repoName, syncDict.keys())
+            greenRepoString = colored(repoString, 'green')
+            redRepoString   = colored(repoString, 'red')
+            try:
+                rev = getCurrentBranchOrHash(absRepoPath)
+                restoreDict[absRepoPath] = rev
+                printWithVars2("{greenRepoString}: recording repository state of '{rev}' before starting bisect")
+            except:
+                anyFailures = True
+                printWithVars2("{redRepoString}: error recoding original branch in {absRepoPath}")
+                continue
+        writeBisectRestoreToJson(syncRepoPath, restoreDict)
+        if anyFailures:
+            print colored("failure! not all repo states recorded before bisect.", 'red')
+
+    bisectCmd = "git bisect " + command + " " + " ".join(remainingArgs)
     res = gitCommand(bisectCmd, 2, cwd=syncRepoPath, verbosity=verbosity);
     newRev = getCurrentRevHash(syncRepoPath)
     if newRev != currentRev:
         commandSync()
+
+    if command == 'reset':
+        restoreDict = loadBisectRestoreFromJson(syncRepoPath)
+        for repoName in syncDict:
+            repoInfo = syncDict[repoName]
+            absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
+            repoString = paddedRepoName(repoName, syncDict.keys())
+            greenRepoString = colored(repoString, 'green')
+            redRepoString   = colored(repoString, 'red')
+            try:
+                rev = restoreDict[absRepoPath] if (absRepoPath in restoreDict) else None
+                if not rev:
+                    raise Exception("Restore changesete not found")
+                res = gitCommand("git checkout {rev}", 3, cwd=absRepoPath, verbosity=verbosity)
+                printWithVars2("{greenRepoString}: restoring repository state to '{rev}' after finishing bisect")
+            except:
+                anyFailures = True
+                printWithVars2("{redRepoString}: error restoring original branch in {absRepoPath}")
+                continue
+        if anyFailures:
+            print colored("failure! not all repo states restored after bisect.", 'red')
+        removeBisectRestoreFile(syncRepoPath)
 
 
 
@@ -499,7 +548,7 @@ def commandClone():
 # a git command
 # --------------------------------------------------------------------------------------------------------------------------
 
-def distributeGitCommand(command, includeSyncRepo=False):
+def distributeGitCommand(command, includeSyncRepo=False, *remainingArgs):
     if not command in approved_git_commands:
         yellowWarning = colored("warning", 'yellow')
         printWithVars1("{yellowWarning}: the git command `{command}` might not make sense being applied non-interactively to each repo in the bank. Use at your own discretion.")
@@ -546,11 +595,11 @@ def dispatchCommand(command):
     if command == "createSyncfile":
         commandCreateSyncfile()
     if command == "bisect":
-        commandBisect()
+        commandBisect(args.bisectcmd)
     if command == "git":
-        distributeGitCommand(args.gitcmd, False)
+        distributeGitCommand(args.gitcmd, False, *remainingArgs)
     if command == "gitall":
-        distributeGitCommand(args.gitcmd, True)
+        distributeGitCommand(args.gitcmd, True, *remainingArgs)
 
 
 

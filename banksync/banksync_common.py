@@ -176,8 +176,52 @@ def getCurrentRevHash(absRepoPath):
 
 
 # --------------------------------------------------------------------------------------------------------------------------
+# banc bisect helpers
+# --------------------------------------------------------------------------------------------------------------------------
+
+# Given the current branch is say "bobby" then return "bobby", or else if we are in a detached head
+# state then return something like "39b2f210afb38cb43dc6387cb7096ad4aa70cc3a"
+
+def getCurrentBranchOrHash(absRepoPath):
+    try:
+        res = gitCommand("git branch", 3, cwd=absRepoPath, verbosity=1, ignoreErrors=False)
+        restore = None
+        m = re.search('^\* \(HEAD detached at.*', res["stdout"], re.MULTILINE)
+        if m:
+            return getCurrentRevHash(absRepoPath)
+        m = re.search('^\* (.*)$', res["stdout"], re.MULTILINE)
+        if m:
+            return m.group(1)
+    except:
+        pass
+    raise Exception("Invalid Branch")
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------
 # Dictionary Operations
 # --------------------------------------------------------------------------------------------------------------------------
+
+def writeBisectRestoreToJson(syncRepoPath, restoreDict):
+    newFileContents = json.dumps(restoreDict, indent=4)
+    absSyncRepoPath = os.path.abspath(syncRepoPath)
+    absBisectRestorePath = os.path.join(absSyncRepoPath, '.bisectRestore')
+    with open(absBisectRestorePath, 'w') as f:
+        f.write(newFileContents)
+
+def loadBisectRestoreFromJson(syncRepoPath):
+    checkForSyncRepoDir(syncRepoPath)
+    absSyncRepoPath = os.path.abspath(syncRepoPath)
+    absBisectRestorePath = os.path.join(absSyncRepoPath, '.bisectRestore')
+    with open(absBisectRestorePath) as f:
+        jsonTxt = f.read()
+        restoreDict = json.loads(jsonTxt, object_pairs_hook=OrderedDict)
+        return restoreDict if restoreDict else OrderedDict()
+
+def removeBisectRestoreFile(syncRepoPath):
+    absSyncRepoPath = os.path.abspath(syncRepoPath)
+    absBisectRestorePath = os.path.join(absSyncRepoPath, '.bisectRestore')
+    os.remove(absBisectRestorePath)
 
 def loadSyncFileAsDict(syncFilePath):
     absSyncFilePath = os.path.abspath(syncFilePath)
