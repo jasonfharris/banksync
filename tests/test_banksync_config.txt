@@ -182,4 +182,22 @@ True
 >>> hawkHash == execute4('git rev-parse HEAD', cwd='repoBird')[1].strip()
 True
 
-#>>> ans = execute4('rm -rf repoFish repoSyncFile repoBird')
+
+# Do bank git checkout master
+
+>>> ans = execute4('git checkout {syncPoint1} --force', cwd='repoSyncFile')
+>>> ans = execute4('../banksync/banksync.py sync', cwd='repoSyncFile')
+>>> troutHash == execute4('git rev-parse HEAD', cwd='repoFish')[1].strip()
+True
+>>> sparrowHash == execute4('git rev-parse HEAD', cwd='repoBird')[1].strip()
+True
+>>> ans = execute4('../banksync/banksync.py git checkout master', cwd='repoSyncFile')
+>>> salmonHash == execute4('git rev-parse HEAD', cwd='repoFish')[1].strip()
+True
+>>> eagleHash == execute4('git rev-parse HEAD', cwd='repoBird')[1].strip()
+True
+>>> syncPoint1 == execute4('git rev-parse HEAD', cwd='repoSyncFile')[1].strip()
+True
+>>> ans = execute4('../banksync/banksync.py gitall checkout master', cwd='repoSyncFile')
+>>> syncPoint3 == execute4('git rev-parse HEAD', cwd='repoSyncFile')[1].strip()
+True
