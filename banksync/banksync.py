@@ -408,7 +408,7 @@ def commandRecordRepos():
 # --------------------------------------------------------------------------------------------------------------------------
 
 def commandCreateSyncfile():
-    checkForSyncRepoDir(syncFilePath, existing = False)
+    checkForSyncRepoDir(syncRepoPath, existing = False)
     newSyncDict = OrderedDict()
     anyFailures = False
     repoNames = remainingArgs
@@ -505,7 +505,7 @@ def distributeGitCommand(command, includeSyncRepo=False):
 
     gitCmd = "git " + command + " " + " ".join(remainingArgs)
     gitCmd = gitCmd.strip()
-    checkForSyncRepoDir(syncFilePath)
+    checkForSyncRepoDir(syncRepoPath)
     syncDict = loadSyncFileAsDict(syncFilePath)
     anyFailures = False
     opts = {'captureStdOutStdErr':False, 'verbosity':verbosity}

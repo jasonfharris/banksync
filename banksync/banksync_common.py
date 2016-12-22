@@ -125,9 +125,8 @@ def checkForSyncRepoFile(syncFilePath):
         printWithVars1("failure! could not locate the sync file at {absSyncFilePath}.", 'red')
         sys.exit(1)
 
-def checkForSyncRepoDir(syncFilePath, existing = True):
-    absSyncFilePath = os.path.abspath(syncFilePath)
-    absSyncRepoPath = os.path.dirname(absSyncFilePath)
+def checkForSyncRepoDir(syncRepoPath, existing = True):
+    absSyncRepoPath = os.path.abspath(syncRepoPath)
 
     if not os.path.isdir(absSyncRepoPath):
         printWithVars1("failure! could not locate the syncrepo dir at {absSyncRepoPath}.", 'red')
@@ -141,8 +140,10 @@ def checkForSyncRepoDir(syncFilePath, existing = True):
         sys.exit(1)
 
 def checkForSyncRepo(syncFilePath):
-    checkForSyncRepoFile(syncFilePath)
-    checkForSyncRepoDir(syncFilePath)
+    absSyncFilePath = os.path.abspath(syncFilePath)
+    absSyncRepoPath = os.path.dirname(absSyncFilePath)
+    checkForSyncRepoFile(absSyncFilePath)
+    checkForSyncRepoDir(absSyncRepoPath)
 
 
 
