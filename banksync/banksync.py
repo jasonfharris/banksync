@@ -34,7 +34,8 @@ defaultOptions = {
         'cwd' : '.',
         'syncfile' : 'syncfile.wl',
         'verbosity' : 2,
-        'colorize' : 'yes'
+        'colorize' : 'yes',
+        'seperator' : ' '
     },
     'sync' : {
         'matching' : 'closetimestamp'
@@ -557,10 +558,12 @@ def distributeGitCommand(command, includeSyncRepo=False, *remainingArgs):
 
     gitCmd = "git " + command + " " + " ".join(remainingArgs)
     gitCmd = gitCmd.strip()
+    gitRepoSeperatorString = (resolvedOpts['General']['seperator']*40)[0:40]
     checkForSyncRepoDir(syncRepoPath)
     syncDict = loadSyncFileAsDict(syncFilePath)
     anyFailures = False
     opts = {'captureStdOutStdErr':False, 'verbosity':verbosity}
+    printWithVars2(gitRepoSeperatorString)
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
         absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
@@ -569,9 +572,11 @@ def distributeGitCommand(command, includeSyncRepo=False, *remainingArgs):
             continue
         opts['cwd'] = absRepoPath
         gitCommand(gitCmd, 2, **opts);
+        printWithVars2(gitRepoSeperatorString)
     if includeSyncRepo:
         opts['cwd'] = syncRepoPath
         gitCommand(gitCmd, 2, **opts);
+        printWithVars2(gitRepoSeperatorString)
 
     if anyFailures:
         printWithVars1("failure! not all constituent repos present.", 'red')
@@ -629,6 +634,7 @@ def getResolvedOptions(args):
             'syncfile' : getattr(args, 'syncfile', 'auto'),
             'verbosity' : getattr(args, 'verbosity', autoNum),
             'colorize' :  getattr(args, 'colorize', 'auto'),
+            'seperator' : getattr(args, 'seperator', 'auto'),
         },
         'sync' : {
             'matching' : getattr(args, 'matching', 'auto')
