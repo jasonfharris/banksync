@@ -110,6 +110,7 @@ True
 
 # Test bisect
 
+>>> ans = execute4('banksync/banksync.py gitall --syncfile repoSyncFile/syncfile.wl checkout master')
 >>> ans = execute4('banksync/banksync.py bisect --syncfile repoSyncFile/syncfile.wl start')
 >>> ans = execute4('banksync/banksync.py bisect --syncfile repoSyncFile/syncfile.wl good {syncPoint1}')
 >>> ans = execute4('banksync/banksync.py bisect --syncfile repoSyncFile/syncfile.wl bad {syncPoint3}')
@@ -117,6 +118,17 @@ True
 True
 >>> ans = execute4('banksync/banksync.py bisect --syncfile repoSyncFile/syncfile.wl good {syncPoint2}')
 >>> bool(re.search(syncPoint3.strip() + ' is the first bad commit', ans[1]))
+True
+>>> snapperHash == execute4('git rev-parse HEAD', cwd='repoFish')[1].strip()
+True
+>>> hawkHash == execute4('git rev-parse HEAD', cwd='repoBird')[1].strip()
+True
+>>> ans = execute4('banksync/banksync.py bisect --syncfile repoSyncFile/syncfile.wl reset')
+>>> syncPoint3 == execute4('git rev-parse HEAD', cwd='repoSyncFile')[1].strip()
+True
+>>> salmonHash == execute4('git rev-parse HEAD', cwd='repoFish')[1].strip()
+True
+>>> eagleHash == execute4('git rev-parse HEAD', cwd='repoBird')[1].strip()
 True
 
 
