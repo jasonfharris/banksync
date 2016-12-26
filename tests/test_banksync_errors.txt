@@ -10,6 +10,8 @@
 
 >>> set_defaults('verbosity', 2)
 >>> set_defaults('captureStdOutStdErr', True)
+>>> def currentHash(repo):
+...     return execute4('git rev-parse HEAD', cwd=repo)[1].strip()
 
 # Test errors in generation
 
