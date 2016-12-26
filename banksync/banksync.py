@@ -13,7 +13,7 @@ from collections import OrderedDict
 from sysexecute import *
 from banksync_common import *
 
-__version__ = "0.7.3"
+__version__ = "0.7.5"
 
 
 # --------------------------------------------------------------------------------------------------------------------------
