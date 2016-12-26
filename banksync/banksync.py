@@ -314,10 +314,13 @@ def commandSync():
 
             if (method == "sha") and ("sha" in repoInfo):
                 hash = repoInfo["sha"]
+                shortHash = hash[0:12]
+                if dryrun:
+                    printWithVars2("{repoString}: would try and check out revision by {method}: {shortHash}", dryrun=False)
+                    break
                 res = gitCommand("git checkout -B {defaultSyncPointBranchName} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
                 if res["code"] == 0:
                     revNum = getRevNumber(hash, absRepoPath)
-                    shortHash = hash[0:12]
                     printWithVars2("{greenRepoString}: successfully checked out revision by {method}: {shortHash} (revision number {revNum})")
                     found = True
                     break
@@ -327,6 +330,9 @@ def commandSync():
                 if (matching == 'timestamp') or (matching == 'closetimestamp'):
                     ts = repoInfo["UnixTimeStamp"]
                     date = dateFromTimeStamp(ts)
+                    if dryrun:
+                        printWithVars2("{repoString}: would try and check out revision by {method}: {ts} ({date})", dryrun=False)
+                        break
                     res = gitCommand("git log --all --format=format:'\"%at\" : \"%H\",'", 4, cwd=absRepoPath, raiseOnFailure=True, verbosity=verbosity, permitShowingStdOut=False, permitShowingStdErr=False)
                     shaHash = 0
                     if res["code"] == 0:
@@ -358,10 +364,12 @@ def commandSync():
 
                     printWithVars3("{repoString}: failed to check out revision by {method}: {ts} {date}")
 
-        if not found:
+        if not found and not dryrun:
             allFound = False
             printWithVars2("{redRepoString}: failed to check out specified revision by any method.")
-    if allFound:
+    if dryrun:
+        pass
+    elif allFound:
         print colored("success! all repos checked out to the specified sync state.", 'green')
     else:
         print colored("failure! not all repos checked out to the specified sync state.", 'red')
@@ -387,7 +395,7 @@ def commandRecordRepos():
         if not checkForRepo(repoString, absRepoPath):
             anyFailures = True
             continue
-        (worked, newRepoInfo) = dictFromCurrentRepoState(repoInfo["path"], cwd=cwd, verbosity=verbosity)
+        (worked, newRepoInfo) = dictFromCurrentRepoState(repoInfo["path"], cwd=cwd, verbosity=verbosity, dryrun=False)
         if worked:
             shortHash = newRepoInfo["sha"][0:12]
             date = newRepoInfo["date"]
@@ -396,6 +404,9 @@ def commandRecordRepos():
             printWithVars2("{redRepoString}: failure! not able to get the status of {repoName} at {absRepoPath}", 'red')
             anyFailures = True
         newSyncDict[repoName] = newRepoInfo
+    
+    if dryrun:
+        sys.exit(0)
     
     writeDictToSyncFile(syncFilePath, newSyncDict)
 
@@ -424,7 +435,7 @@ def commandCreateSyncfile():
         if not checkForRepo(repoName, absRepoPath):
             anyFailures = True
             continue
-        (worked, newRepoInfo) = dictFromCurrentRepoState(repo, cwd=cwd, verbosity=verbosity)
+        (worked, newRepoInfo) = dictFromCurrentRepoState(repo, cwd=cwd, verbosity=verbosity, dryrun=False)
         if worked:
             shortHash = newRepoInfo["sha"][0:12]
             date = newRepoInfo["date"]
@@ -433,6 +444,9 @@ def commandCreateSyncfile():
             printWithVars2("failure! not able to get the status of {repoName} at {absRepoPath}", 'red')
             anyFailures = True
         newSyncDict[repoName] = newRepoInfo
+
+    if dryrun:
+        sys.exit(0)
 
     writeDictToSyncFile(syncFilePath, newSyncDict)
 
@@ -453,6 +467,10 @@ def commandBisect(command):
     syncDict = loadSyncFileAsDict(syncFilePath)
     currentRev = getCurrentRevHash(syncRepoPath)
     anyFailures = False
+
+    if dryrun:
+        printWithVars2("would try exectue the given bisect command on the current sync repo and sync the bank repos to the new state.")
+        sys.exit(0)
 
     if command == 'start':
         restoreDict = OrderedDict()
@@ -527,6 +545,10 @@ def commandClone():
         cloneURL = repoInfo["cloneURL"]
         name = os.path.basename(absRepoPath)
         dir  = os.path.dirname(absRepoPath)
+        if dryrun:
+            printWithVars2("{repoString}: would clone {cloneURL} to {absRepoPath}.", dryrun=False)
+            continue
+
         opts['cwd'] = dir
         execute3("mkdir -p {dir}")
         res = gitCommand("git clone {cloneURL} {name}", 3, **opts)
@@ -536,6 +558,8 @@ def commandClone():
             anyFailures = True
             printWithVars2("{redRepoString}: error cloning repo to {absRepoPath}")
 
+    if dryrun:
+        sys.exit(0)
     if anyFailures:
         print colored("failure! not all repos cloned.", 'red')
         sys.exit(1)
@@ -563,7 +587,7 @@ def distributeGitCommand(command, includeSyncRepo=False, *remainingArgs):
     syncDict = loadSyncFileAsDict(syncFilePath)
     anyFailures = False
     opts = {'captureStdOutStdErr':False, 'verbosity':verbosity}
-    printWithVars2(gitRepoSeperatorString)
+    printWithVars2(gitRepoSeperatorString, dryrun=False)
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
         absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
@@ -572,11 +596,11 @@ def distributeGitCommand(command, includeSyncRepo=False, *remainingArgs):
             continue
         opts['cwd'] = absRepoPath
         gitCommand(gitCmd, 2, **opts);
-        printWithVars2(gitRepoSeperatorString)
+        printWithVars2(gitRepoSeperatorString, dryrun=False)
     if includeSyncRepo:
         opts['cwd'] = syncRepoPath
         gitCommand(gitCmd, 2, **opts);
-        printWithVars2(gitRepoSeperatorString)
+        printWithVars2(gitRepoSeperatorString, dryrun=False)
 
     if anyFailures:
         printWithVars1("failure! not all constituent repos present.", 'red')
@@ -651,7 +675,7 @@ def getResolvedOptions(args):
 
 
 def main():
-    global args, remainingArgs, syncFilePath, syncRepoPath, cwd, verbosity, resolvedOpts
+    global args, remainingArgs, syncFilePath, syncRepoPath, cwd, verbosity, dryrun, resolvedOpts
     args, remainingArgs = parseArguments()
 
     command = args.subparser_name
@@ -661,8 +685,9 @@ def main():
     colorize = resolvedOpts['General']['colorize']
     syncFilePath = resolvedOpts['General']['syncfile']
     syncRepoPath = os.path.dirname(os.path.abspath(syncFilePath))
+    dryrun = args.dryrun
     set_defaults('verbosity', verbosity)
-    set_defaults('dryrun', args.dryrun)
+    set_defaults('dryrun', dryrun)
     set_defaults('colorize', colorize)
     
     dispatchCommand(command)
