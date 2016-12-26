@@ -229,7 +229,7 @@ def parseArguments():
     parent_parser.add_argument("--syncfile", metavar="SYNCFILE", help="the path to the syncfile", default='auto')
     parent_parser.add_argument("--cwd", metavar="CWD", help="prefix / change the working directory for the repos in the sync file", default='auto')
     parent_parser.add_argument("--verbosity", metavar="NUM", help="Specify the level of reported feedback / detail. Acceptable values: 1 (minimal feedback), 2 (some feedback) , 3 (detailed feedback), or 4 (full feedback)", type=int, default=autoNum)
-    parent_parser.add_argument('--colorize', dest='colorize', help="Colorize the output: {colorizeOptionValues}", choices=colorizeOptionValues, default='auto')
+    parent_parser.add_argument('--colorize', metavar='BOOL', help=stringWithVars("Colorize the output: {colorizeOptionValues}"), choices=colorizeOptionValues, default='auto')
     parent_parser.add_argument('--dryrun', dest='dryrun', action='store_true', help="Print what would happen instead of performing the command")
     parent_parser.set_defaults(dryrun=False)
 
@@ -584,7 +584,11 @@ def getResolvedOptions(args):
     }
     
     bankOptions = mergeOptionDicts(bankOptions, passedInOptions)
+    
+    # normalize non-string options
     bankOptions['General']['verbosity'] = int(bankOptions['General']['verbosity'])
+    bankOptions['General']['colorize'] = True if (bankOptions['General']['colorize'].lower() in ['yes','true']) else False
+
     return bankOptions
 
 
@@ -594,13 +598,14 @@ def main():
 
     command = args.subparser_name
     resolvedOpts = getResolvedOptions(args)
-    syncFilePath = resolvedOpts['General']['syncfile']
-    syncRepoPath = os.path.dirname(os.path.abspath(syncFilePath))
     cwd = resolvedOpts['General']['cwd']
     verbosity = resolvedOpts['General']['verbosity']
     colorize = resolvedOpts['General']['colorize']
+    syncFilePath = resolvedOpts['General']['syncfile']
+    syncRepoPath = os.path.dirname(os.path.abspath(syncFilePath))
     set_defaults('verbosity', verbosity)
     set_defaults('dryrun', args.dryrun)
+    set_defaults('colorize', colorize)
     
     dispatchCommand(command)
 
