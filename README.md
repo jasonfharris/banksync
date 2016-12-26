@@ -154,15 +154,27 @@ The second option just tells us what the name of the syncfile is. We could have 
 
 The command line tool `bank` has several options which can be specified:
 
-#### --syncfile
+#### --syncfile <path>
 
 The `syncfile` option specifies a syncfile. The syncfile contents specify which repos are part of the bank. The various keys which are recorded if present are:`path`, `sha`, `UnixTimeStamp`, `date`, `author`, `revisionNumber`, `message`, and `cloneURL`. Adding other keys at present will not effect or change the behavior of the bank tool so you can add other info as you see fit / want to each of the recorded states in the various repos.
 
-#### --cwd
+#### --cwd <path>
 
 The cwd option will change the working directory. Using this you can specify the relative path to get to the base of where the path for each of the repos in the bank are. For instance in the layout example of the animals project above, if we are in the directory `animals/animalsSyncRepo` then since the path in the syncfile for "Birds" is just `repoBird` then relative to `animals/animalsSyncRepo` we want the directory `../repoBird`. So we would use the option `--cwd ..`
 
-#### --matching
+#### --dryrun
+
+If this option is specified then `banksync` will report what it *would* do but it doesn't actually do anything.
+
+#### --colorize <bool>
+
+You can specify if color is not to be used in output if for instance you want the logs to be parsed in jenkins or other devops tools. (The default is `True`, i.e. colorize the output of the bank command)
+
+#### --verbosity <num>
+
+You can specify how much information banksync reports. This integer should be between 0, 1, 2, 3, or 4. The higher the number the more verbose is the reporting. The default is 2.
+
+#### --matching <type>
 
 When attempting to sync the constituent repos to the versions specified in the syncfile, how do we determine what to set the versions to? We want some loose coupling in that for instance if someone runs filter branch on a project or they do some rebase very early on in the history then the shas will change on all the revisions in the repository. So instead of finding a commit via a sha we will have to fall back to looking for a matching timestamp for the revision. These are generally fairly unique in a project unless a lot of cherrypicking has gone on. If we don't find that exact timestamp then we could fall back to the closest matching revision to that timestamp. In this way at least we have some hope of getting close to the configuration at the time instead of just giving up. Ie we get to the exact configuration if it is available but if not get as close as we can. The value of the option can be:
 
