@@ -43,6 +43,6 @@ setup(
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7'
         ],
-    install_requires = ['argparse', 'argcomplete', 'sysexecute', 'configparser'],
-    scripts= ['bin/bank']
+    install_requires = ['argparse', 'argcomplete', 'sysexecute>=1.0.6', 'configparser'],
+    scripts = ['bin/bank', 'bin/banksync']
 )
