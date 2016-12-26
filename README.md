@@ -243,6 +243,21 @@ bank createSyncfile --syncfile syncfile.wl repo1 repo2 ... repoN --cwd some/dir
 
 This would generate or overwrite the syncfile.wl to contain sync points for the current states of `repo1`, `repo2`, ... `repoN`
 
+#### bank createSyncrepo <opts>
+
+`createSyncrepo` is used to generate the syncrepo directory, initialize a git repository there, create the syncfile and also create the bankconfig.ini file. Basically it creates all the working parts of a syncrepo. Eg:
+
+```
+bank createSyncrepo repo1 repo2 ... repoN
+```
+
+This would create the directory `syncrepo` and fill it with a `syncfile.json` and a `bankconfig.ini`. The syncfile would contain the latest states of the `repo1`, `repo2`, ... `repoN`. 
+
+```
+bank createSyncrepo --syncreponame controlrepo --syncfilename felipe.json repo1 repo2 ... repoN
+```
+Would create and initialize a syncrepo called `controlrepo` and inside that a syncfile called `felipe.json`.
+
 #### bank bisect <opts>
 
 You can use `bank bisect` on the syncrepo to step through historic configurations looking for a configuration which produces some change. (Typically we are searching for a regression.) Eg if we have a configuration file in the syncrepo the following might be a typical bisect session:

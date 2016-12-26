@@ -39,10 +39,14 @@ defaultOptions = {
     },
     'sync' : {
         'matching' : 'closetimestamp'
+    },
+    'createSyncrepo' : {
+        'syncfilename' : 'syncfile.json',
+        'syncreponame' : 'syncrepo'
     }
 }
 
-sync_commands = ['sync', 'recordRepos', 'createSyncfile', 'bisect', 'clone', 'git', 'gitall']
+sync_commands = ['sync', 'recordRepos', 'createSyncfile', 'createSyncrepo', 'bisect', 'clone', 'git', 'gitall']
 approved_git_commands = ['reset', 'log', 'status', 'branch', 'checkout', 'commit', 'tag', 'diff', 'fetch',
                          'push', 'pull', 'prune', 'gc', 'fsck', 'ls-files', 'ls-remote', 'ls-tree']
                          
@@ -160,6 +164,23 @@ one directory level up.
 ''')
 
 
+#  CMD: createSyncrepo ----------
+
+createSyncrepoCmdHelp = 'create or overwrite the syncrepo to contain the current sync states for the passed in repos.'
+createSyncrepoCmdDescription = createSyncrepoCmdHelp
+createSyncrepoCmdEpilog = wrapParagraphs('''Example usage:
+
+  bank createSyncrepo repo1 repo2 ... repoN
+
+This would create and initilize a git repository called syncrepo and inside there it would create the syncfile.json
+to record the current states of the repo1 repo2 ... repoN which are located at this level. It would also create the
+bankconfig.ini inside this repo.
+
+  bank createSyncrepo --syncrepo <syncreponame> repo1 repo2 ... repoN --cwd some/dir
+
+This would create the syncrepo as the above command, but the repo would be called syncreponame.
+''')
+
 #  CMD: clone ----------
 
 cloneCmdHelp = 'clone the repos specified in the syncfile'
@@ -228,31 +249,45 @@ repos in the bank and in addition to the actual repo containing the sync file (t
 
 def parseArguments():
 
-    parent_parser = argparse.ArgumentParser(add_help=False)                                 
-    parent_parser.add_argument("--syncfile", metavar="SYNCFILE", help="the path to the syncfile", default='auto')
-    parent_parser.add_argument("--cwd", metavar="CWD", help="prefix / change the working directory for the repos in the sync file", default='auto')
-    parent_parser.add_argument("--verbosity", metavar="NUM", help="Specify the level of reported feedback / detail. Acceptable values: 1 (minimal feedback), 2 (some feedback) , 3 (detailed feedback), or 4 (full feedback)", type=int, default=autoNum)
-    parent_parser.add_argument('--colorize', metavar='BOOL', help=stringWithVars("Colorize the output: {colorizeOptionValues}"), choices=colorizeOptionValues, default='auto')
-    parent_parser.add_argument('--dryrun', dest='dryrun', action='store_true', help="Print what would happen instead of performing the command")
-    parent_parser.set_defaults(dryrun=False)
+    pathOps_parser = argparse.ArgumentParser(add_help=False)                                 
+    pathOps_parser.add_argument("--syncfile", metavar="SYNCFILE", help="the path to the syncfile", default='auto')
+    pathOps_parser.add_argument("--cwd", metavar="CWD", help="prefix / change the working directory for the repos in the sync file", default='auto')
+
+    commonOpts_parser = argparse.ArgumentParser(add_help=False)                                 
+    commonOpts_parser.add_argument("--verbosity", metavar="NUM", help="Specify the level of reported feedback / detail. Acceptable values: 1 (minimal feedback), 2 (some feedback) , 3 (detailed feedback), or 4 (full feedback)", type=int, default=autoNum)
+    commonOpts_parser.add_argument('--colorize', metavar='BOOL', help=stringWithVars("Colorize the output: {colorizeOptionValues}"), choices=colorizeOptionValues, default='auto')
+    commonOpts_parser.add_argument('--dryrun', dest='dryrun', action='store_true', help="Print what would happen instead of performing the command")
+    commonOpts_parser.set_defaults(dryrun=False)
 
     parser = argparse.ArgumentParser(description=mainDescription, epilog=mainEpilog, formatter_class=argparse.RawDescriptionHelpFormatter, prog='bank')
     parser.add_argument('--version', dest='version', action='store_true', help="Show the version number of the banksync tool and exit")
     parser.set_defaults(version=False)
 
     subparsers = parser.add_subparsers(title='commands', dest='subparser_name', metavar = '')
-    def addSubparser(name):
-        return subparsers.add_parser(name, help=eval(name+'CmdHelp'), description=eval(name+'CmdDescription'), epilog=eval(name+'CmdEpilog'), parents = [parent_parser], formatter_class=argparse.RawDescriptionHelpFormatter)
+    def addSubparser(name, parent_parsers=[pathOps_parser, commonOpts_parser]):
+        return subparsers.add_parser(name, help=eval(name+'CmdHelp'), description=eval(name+'CmdDescription'), epilog=eval(name+'CmdEpilog'), parents = parent_parsers, formatter_class=argparse.RawDescriptionHelpFormatter)
         
     parser_syncCmd = addSubparser('sync')
     parser_syncCmd.add_argument("--matching", metavar="MATCH", help=stringWithVars('specify how we can recognize a revision "match": {matchingOptionValues}'), choices=matchingOptionValues, default='auto')
+
     parser_recordReposCmd = addSubparser('recordRepos')
+
     parser_createSyncfileCmd = addSubparser('createSyncfile')
+    parser_createSyncfileCmd.add_argument("repos", metavar="reponame", help='the repos to be included in the bank', nargs="+")
+
+    parser_createSyncrepoCmd = addSubparser('createSyncrepo', [commonOpts_parser])
+    parser_createSyncrepoCmd.add_argument("repos", metavar="reponame", help='the repos to be included in the bank', nargs="+")
+    parser_createSyncrepoCmd.add_argument("--syncfilename", metavar="NAME", help='specify the name and extension of the syncfile', default='auto')
+    parser_createSyncrepoCmd.add_argument("--syncreponame", metavar="NAME", help='specify the name of the syncrepo', default='auto')
+
     parser_cloneCmd = addSubparser('clone')
+
     parser_bisectCmd = addSubparser('bisect')
     parser_bisectCmd.add_argument("bisectcmd", metavar="BISECTCMD", nargs='?', help=stringWithVars("the bisect subcommand one of {bisectSubCommands}."), choices=bisectSubCommands, default='log')
+
     parser_gitCmd = addSubparser('git')
     parser_gitCmd.add_argument("gitcmd", metavar="GITCMD", nargs='?', help=stringWithVars("perform one of {approved_git_commands} on all the repos in the bank."), choices=allGitCommands, default='status')
+
     parser_gitallCmd = addSubparser('gitall')
     parser_gitallCmd.add_argument("gitcmd", metavar="GITCMD", nargs='?', help=stringWithVars("perform one of {approved_git_commands} on all the repos in the bank including the syncrepo."), choices=allGitCommands, default='status')
 
@@ -422,11 +457,10 @@ def commandRecordRepos():
 # command "createSyncfile"
 # --------------------------------------------------------------------------------------------------------------------------
 
-def commandCreateSyncfile():
+def commandCreateSyncfile(repoNames):
     checkForSyncRepoDir(syncRepoPath, existing = False)
     newSyncDict = OrderedDict()
     anyFailures = False
-    repoNames = remainingArgs
     for repo in repoNames:
         absRepoPath = getAbsRepoPath(repo, cwd)
         repoName = os.path.basename(absRepoPath)
@@ -455,6 +489,35 @@ def commandCreateSyncfile():
         sys.exit(1)
     else:
         printWithVars1("success! all constituent repos had their state recorded.", 'green')
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------
+# command "createSyncrepo"
+# --------------------------------------------------------------------------------------------------------------------------
+
+def commandCreateSyncrepo(repoNames):
+    global syncFilePath
+    syncfilename = resolvedOpts['createSyncrepo']['syncfilename']
+    syncreponame = resolvedOpts['createSyncrepo']['syncreponame']
+    syncRepoPath = os.path.abspath(syncreponame)
+    syncFilePath = os.path.join(syncRepoPath, syncfilename)
+    configFilePath = os.path.join(syncRepoPath, 'bankconfig.ini')
+
+    if os.path.isdir(syncRepoPath):
+        printWithVars1("failure! The directory {syncRepoPath} already exists.", 'red')
+        sys.exit(1)
+
+    if dryrun:
+        printWithVars1("The directory {syncRepoPath} would be created and a git repository would be initilized there. The file {configFilePath} and {syncFilePath} would be created and filled.")
+        sys.exit(0)
+
+    os.makedirs(syncRepoPath)
+    with open(configFilePath, 'w') as f:
+        f.write(stringWithVars("[General]\ncwd=..\nsyncFile={syncfilename}"))
+    execute2("git init", cwd=syncRepoPath)
+
+    commandCreateSyncfile(repoNames)
 
 
 
@@ -622,7 +685,9 @@ def dispatchCommand(command):
     if command == "recordRepos":
         commandRecordRepos()
     if command == "createSyncfile":
-        commandCreateSyncfile()
+        commandCreateSyncfile(args.repos)
+    if command == "createSyncrepo":
+        commandCreateSyncrepo(args.repos)
     if command == "bisect":
         commandBisect(args.bisectcmd)
     if command == "git":
@@ -662,6 +727,10 @@ def getResolvedOptions(args):
         },
         'sync' : {
             'matching' : getattr(args, 'matching', 'auto')
+        },
+        'createSyncrepo' : {
+            'syncfilename' : getattr(args, 'syncfilename', 'auto'),
+            'syncreponame' : getattr(args, 'syncreponame', 'auto')
         }
     }
     
