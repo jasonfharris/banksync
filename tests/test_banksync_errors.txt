@@ -35,3 +35,7 @@ True
 >>> ans = execute4('banksync/banksync.py createSyncfile --syncfile repoBob/syncfile.wl repoFish repoBird', ignoreErrors=True)
 >>> bool(re.search('repoFish is not a git repository.*repoBird is not a git repository.*failure! not all constituent repos had their state recorded', ans[1], re.DOTALL))
 True
+
+>>> ans = execute4('banksync/banksync.py createSyncrepo --syncreponame repoBob repoFish repoBird', ignoreErrors=True)
+>>> bool(re.search('failure! The directory .*repoBob already exists', ans[1], re.DOTALL))
+True

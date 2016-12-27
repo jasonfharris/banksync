@@ -13,23 +13,24 @@
 >>> def currentHash(repo):
 ...     return execute4('git rev-parse HEAD', cwd=repo)[1].strip()
 
+
 # Creating Repos
 
->>> ans = execute4('rm -rf repoFish')
+>>> ans = execute4('rm -rf repoFish repoBird repoSyncFile animalsrepo')
+
 >>> ans = execute4('mkdir repoFish')
 >>> ans = execute4('git init', cwd='repoFish')
 >>> ans = execute4('git remote add origin https://github.com/testbank/repoFish.git', cwd='repoFish')
 
->>> ans = execute4('rm -rf repoBird')
 >>> ans = execute4('mkdir repoBird')
 >>> ans = execute4('git init', cwd='repoBird')
 >>> ans = execute4('git remote add origin https://github.com/testbank/repoBird.git', cwd='repoBird')
 
->>> ans = execute4('rm -rf repoSyncFile')
 >>> ans = execute4('mkdir repoSyncFile')
 >>> ans = execute4('git init', cwd='repoSyncFile')
 >>> ans = execute4('echo "[General]\ncwd=..\nsyncFile=syncfile.wl" > repoSyncFile/bankconfig.ini')
 >>> ans = execute4('git remote add origin https://github.com/testbank/animalsRepoSync.git', cwd='repoSyncFile')
+
 
 # Filling Repos Sync Point 1
 
@@ -112,6 +113,37 @@ True
 True
 
 
+# Test createSyncrepo
+
+>>> ans = execute4('rm -rf zoosyncrepo')
+
+>>> ans = execute4('git checkout {syncPoint1}', cwd='repoSyncFile')
+>>> ans = execute4('../banksync/banksync.py sync', cwd='repoSyncFile')
+>>> ans = execute4('banksync/banksync.py createSyncrepo --syncreponame zoosyncrepo --syncfilename joekeeper.wl repoFish repoBird')
+>>> ans = execute4('git add joekeeper.wl', cwd='zoosyncrepo')
+>>> ans = execute4('git commit -am "inital"', cwd='zoosyncrepo')
+>>> zooInitial = currentHash('zoosyncrepo')
+
+>>> ans = execute4('../banksync/banksync.py git checkout master', cwd='zoosyncrepo')
+>>> ans = execute4('../banksync/banksync.py recordRepos', cwd='zoosyncrepo')
+>>> ans = execute4('git commit -am "final"', cwd='zoosyncrepo')
+>>> zooFinal = currentHash('zoosyncrepo')
+
+>>> ans = execute4('git checkout {zooInitial}', cwd='zoosyncrepo')
+>>> ans = execute4('../banksync/banksync.py sync', cwd='zoosyncrepo')
+>>> troutHash == currentHash('repoFish')
+True
+>>> sparrowHash == currentHash('repoBird')
+True
+
+>>> ans = execute4('git checkout {zooFinal}', cwd='zoosyncrepo')
+>>> ans = execute4('../banksync/banksync.py sync', cwd='zoosyncrepo')
+>>> salmonHash == currentHash('repoFish')
+True
+>>> eagleHash == currentHash('repoBird')
+True
+
+
 # Test bisect
 
 >>> ans = execute4('../banksync/banksync.py gitall checkout master', cwd='repoSyncFile')
@@ -134,6 +166,7 @@ True
 True
 >>> eagleHash == currentHash('repoBird')
 True
+
 
 # Test sync with timestamps
 
