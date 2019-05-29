@@ -13,7 +13,6 @@ from collections import OrderedDict
 from sysexecute import *
 from banksync_common import *
 
-__version__ = "0.7.6"
 
 
 # --------------------------------------------------------------------------------------------------------------------------
@@ -755,9 +754,9 @@ def main():
     syncFilePath = resolvedOpts['General']['syncfile']
     syncRepoPath = os.path.dirname(os.path.abspath(syncFilePath))
     dryrun = args.dryrun
-    set_defaults('verbosity', verbosity)
-    set_defaults('dryrun', dryrun)
-    set_defaults('colorize', colorize)
+    set_execute_defaults('verbosity', verbosity)
+    set_execute_defaults('dryrun', dryrun)
+    set_execute_defaults('colorize', colorize)
     
     dispatchCommand(command)
 
