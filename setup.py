@@ -3,7 +3,7 @@ from setuptools import setup
 with open('README.md') as f:
     long_description = f.read()
 
-version = '0.9.0'
+version = '0.9.3'
 
 setup(
     name = 'banksync',
