@@ -1,17 +1,9 @@
 from setuptools import setup
-import re
 
-try:
-    import pypandoc
-    long_description = pypandoc.convert_file('README.md', 'rst')
-except ImportError:
-    long_description = open('README.md').read()
+with open('README.md') as f:
+    long_description = f.read()
 
-version = re.search(
-    '^__version__\s*=\s*"(.*)"',
-    open('banksync/banksync.py').read(),
-    re.M
-    ).group(1)
+version = '0.9.0'
 
 setup(
     name = 'banksync',
@@ -19,6 +11,7 @@ setup(
     version = version,
     description = 'A library for manipulating banks of git repositories',
     long_description = long_description,
+    long_description_content_type='text/markdown',  # This is important!
     author = 'Jason Harris',
     author_email = 'jason@jasonfharris.com',
     license='MIT',
@@ -41,8 +34,9 @@ setup(
         # that you indicate whether you support Python 2, Python 3 or both.
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7'
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.7'
         ],
-    install_requires = ['argparse', 'argcomplete', 'sysexecute>=1.0.6', 'configparser'],
+    install_requires = ['argparse', 'argcomplete', 'sysexecute>=1.1.6', 'configparser'],
     scripts = ['bin/bank', 'bin/banksync']
 )
