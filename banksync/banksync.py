@@ -11,7 +11,7 @@ import argcomplete
 import json
 from collections import OrderedDict
 from sysexecute import *
-from banksync_common import *
+from .banksync_common import *
 
 
 
@@ -333,7 +333,7 @@ def commandSync():
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
         absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
-        repoString = paddedRepoName(repoName, syncDict.keys())
+        repoString = paddedRepoName(repoName, list(syncDict.keys()))
         greenRepoString  = colored(repoString, 'green')
         redRepoString    = colored(repoString, 'red')
         yellowRepoString = colored(repoString, 'yellow')
@@ -404,9 +404,9 @@ def commandSync():
     if dryrun:
         pass
     elif allFound:
-        print colored("success! all repos checked out to the specified sync state.", 'green')
+        print(colored("success! all repos checked out to the specified sync state.", 'green'))
     else:
-        print colored("failure! not all repos checked out to the specified sync state.", 'red')
+        print(colored("failure! not all repos checked out to the specified sync state.", 'red'))
         sys.exit(1)
 
 
@@ -423,7 +423,7 @@ def commandRecordRepos():
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
         absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
-        repoString = paddedRepoName(repoName, syncDict.keys())
+        repoString = paddedRepoName(repoName, list(syncDict.keys()))
         greenRepoString = colored(repoString, 'green')
         redRepoString   = colored(repoString, 'red')
         if not checkForRepo(repoString, absRepoPath):
@@ -539,7 +539,7 @@ def commandBisect(command):
         for repoName in syncDict:
             repoInfo = syncDict[repoName]
             absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
-            repoString = paddedRepoName(repoName, syncDict.keys())
+            repoString = paddedRepoName(repoName, list(syncDict.keys()))
             greenRepoString = colored(repoString, 'green')
             redRepoString   = colored(repoString, 'red')
             try:
@@ -552,7 +552,7 @@ def commandBisect(command):
                 continue
         writeBisectRestoreToJson(syncRepoPath, restoreDict)
         if anyFailures:
-            print colored("failure! not all repo states recorded before bisect.", 'red')
+            print(colored("failure! not all repo states recorded before bisect.", 'red'))
 
     bisectCmd = "git bisect " + command + " " + " ".join(remainingArgs)
     res = gitCommand(bisectCmd, 2, cwd=syncRepoPath, verbosity=verbosity);
@@ -565,7 +565,7 @@ def commandBisect(command):
         for repoName in syncDict:
             repoInfo = syncDict[repoName]
             absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
-            repoString = paddedRepoName(repoName, syncDict.keys())
+            repoString = paddedRepoName(repoName, list(syncDict.keys()))
             greenRepoString = colored(repoString, 'green')
             redRepoString   = colored(repoString, 'red')
             try:
@@ -579,7 +579,7 @@ def commandBisect(command):
                 printWithVars2("{redRepoString}: error restoring original branch in {absRepoPath}")
                 continue
         if anyFailures:
-            print colored("failure! not all repo states restored after bisect.", 'red')
+            print(colored("failure! not all repo states restored after bisect.", 'red'))
         removeBisectRestoreFile(syncRepoPath)
 
 
@@ -597,7 +597,7 @@ def commandClone():
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
         absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
-        repoString = paddedRepoName(repoName, syncDict.keys())
+        repoString = paddedRepoName(repoName, list(syncDict.keys()))
         greenRepoString = colored(repoString, 'green')
         redRepoString   = colored(repoString, 'red')
         if not "cloneURL" in repoInfo:
@@ -623,10 +623,10 @@ def commandClone():
     if dryrun:
         sys.exit(0)
     if anyFailures:
-        print colored("failure! not all repos cloned.", 'red')
+        print(colored("failure! not all repos cloned.", 'red'))
         sys.exit(1)
 
-    print colored("success! all repos cloned.", 'green')
+    print(colored("success! all repos cloned.", 'green'))
     commandSync()
 
 
