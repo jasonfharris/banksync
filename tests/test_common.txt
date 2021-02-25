@@ -4,8 +4,7 @@
 
 >>> import sys, os, time
 >>> from sysexecute import *
->>> sys.path.append(os.path.abspath('.'))
->>> sys.path.append(os.path.abspath('..'))
+
 >>> from banksync import *
 
 >>> import configparser
