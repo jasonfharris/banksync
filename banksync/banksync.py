@@ -13,7 +13,7 @@ from collections import OrderedDict
 from sysexecute import *
 from .banksync_common import *
 
-
+__version__ = "0.9.5"
 
 # --------------------------------------------------------------------------------------------------------------------------
 # Defines
@@ -497,6 +497,7 @@ def commandCreateSyncfile(repoNames):
 
 def commandCreateSyncrepo(repoNames):
     global syncFilePath
+    global syncRepoPath
     syncfilename = resolvedOpts['createSyncrepo']['syncfilename']
     syncreponame = resolvedOpts['createSyncrepo']['syncreponame']
     syncRepoPath = os.path.abspath(syncreponame)

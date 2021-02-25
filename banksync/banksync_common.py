@@ -42,7 +42,7 @@ def isSha1Str(s):
 
 def correctlyQuoteArg(arg):
     """quote any string that has white space in it"""
-    m = re.match('.*\s+.*', arg)
+    m = re.match(r'.*\s+.*', arg)
     if m:
         return '"{}"'.format(arg)
     return arg
@@ -186,10 +186,10 @@ def getCurrentBranchOrHash(absRepoPath):
     try:
         res = gitCommand("git branch", 3, cwd=absRepoPath, verbosity=1, ignoreErrors=False)
         restore = None
-        m = re.search('^\* \(HEAD detached at.*', res["stdout"], re.MULTILINE)
+        m = re.search(r'^\* \(HEAD detached at.*', res["stdout"], re.MULTILINE)
         if m:
             return getCurrentRevHash(absRepoPath)
-        m = re.search('^\* (.*)$', res["stdout"], re.MULTILINE)
+        m = re.search(r'^\* (.*)$', res["stdout"], re.MULTILINE)
         if m:
             return m.group(1)
     except:
@@ -284,11 +284,11 @@ def dictFromCurrentRepoState(path, **kwargs):
         res = gitCommand("git remote --verbose", **opts)
         cloneURL = ''
         if not cloneURL:
-            m = re.match('origin\s*(\S+) \(fetch\)', res["stdout"])
+            m = re.search('origin\s*(\S+) \(fetch\)', res["stdout"])
             if m:
                 cloneURL = m.group(1)
         if not cloneURL:
-            m = re.match('(\w+)\s*(\S+) \(fetch\)', res["stdout"])
+            m = re.search('(\w+)\s*(\S+) \(fetch\)', res["stdout"])
             if m:
                 cloneURL = m.group(1)
         if cloneURL:
