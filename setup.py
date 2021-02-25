@@ -1,13 +1,13 @@
-from setuptools import setup
+import setuptools
 
 with open('README.md') as f:
     long_description = f.read()
 
-version = '0.9.3'
+version = '0.9.5'
 
-setup(
+setuptools.setup(
     name = 'banksync',
-    packages = ['banksync'], # this must be the same as the name above
+    packages = setuptools.find_packages(),
     version = version,
     description = 'A library for manipulating banks of git repositories',
     long_description = long_description,
