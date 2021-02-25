@@ -1,11 +1,16 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
+# This is a local copy of the binaries bin/bank and bin/banksync which is located at the "correct" place in the directory hierarchy
+# Use this launcher for local testing of the package
+
 # -*- coding: utf-8 -*-
 import re
 import sys
 
 from banksync.banksync import main
+
+#import pudb; pu.db
 
 if __name__ == '__main__':
     sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
