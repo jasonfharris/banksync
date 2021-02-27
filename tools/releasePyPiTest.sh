@@ -6,6 +6,11 @@
 # it is important the script is run from there.
 
 pip3 uninstall banksync
+
+rm -r banksync.egg-info 2> /dev/null
+rm -r build 2> /dev/null
+rm -r dist 2> /dev/null
+
 python3 -m build
 
 #python3 -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
