@@ -352,13 +352,15 @@ def commandSync():
                 if dryrun:
                     printWithVars2("{repoString}: would try and check out revision by {method}: {shortHash}", dryrun=False)
                     break
+                
+                print(f"\r>> checking out {hash}...", end='', flush=True)
                 res = gitCommand("git checkout -B {defaultSyncPointBranchName} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
                 if res["code"] == 0:
                     revNum = getRevNumber(hash, absRepoPath)
-                    printWithVars2("{greenRepoString}: successfully checked out revision by {method}: {shortHash} (revision number {revNum})")
+                    printWithVars2("\r{greenRepoString}: successfully checked out revision by {method}: {shortHash} (revision number {revNum})")
                     found = True
                     break
-                printWithVars3("{repoString}: failed to check out revision by {method}: {hash}")
+                printWithVars3("\r{repoString}: failed to check out revision by {method}: {hash}")
 
             if (method == "UnixTimeStamp") and ("UnixTimeStamp" in repoInfo):
                 if (matching == 'timestamp') or (matching == 'closetimestamp'):
@@ -367,6 +369,7 @@ def commandSync():
                     if dryrun:
                         printWithVars2("{repoString}: would try and check out revision by {method}: {ts} ({date})", dryrun=False)
                         break
+                    
                     res = gitCommand("git log --all --format=format:'\"%at\" : \"%H\",'", 4, cwd=absRepoPath, raiseOnFailure=True, verbosity=verbosity, permitShowingStdOut=False, permitShowingStdErr=False)
                     shaHash = 0
                     if res["code"] == 0:
@@ -375,6 +378,7 @@ def commandSync():
                             if (matching == 'timestamp') or (matching == 'closetimestamp'):
                                 hash = timestampsToShas[ts]
                                 branch=defaultSyncPointBranchName
+                                print(f"\r>> checking out {ts} ({date})...", end='', flush=True)
                                 res = gitCommand("git checkout -B {branch} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
                                 if res["code"] == 0:
                                     revNum = getRevNumber(hash, absRepoPath)
@@ -387,16 +391,17 @@ def commandSync():
                                 closestDate = dateFromTimeStamp(closestTimestamp)
                                 hash = timestampsToShas[closestTimestamp]
                                 branch=defaultSyncPointBranchName
+                                print(f"\r>> checking out close {ts} ({date})...", end='', flush=True)
                                 res = gitCommand("git checkout -B {branch} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
                                 if res["code"] == 0:
                                     revNum = getRevNumber(hash, absRepoPath)
-                                    printWithVars2("{yellowRepoString}: warning checking out revision by closest timestamp.", "red")
+                                    printWithVars2("\r{yellowRepoString}: warning checking out revision by closest timestamp.", "red")
                                     printWithVars2("       requested {method}: {ts} ({date})")
                                     printWithVars2("       used      {method}: {closestTimestamp} ({closestDate}) {hash} (revision number {revNum})")
                                     found = True
                                     break
 
-                    printWithVars3("{repoString}: failed to check out revision by {method}: {ts} {date}")
+                    printWithVars3("\r{repoString}: failed to check out revision by {method}: {ts} {date}")
 
         if not found and not dryrun:
             allFound = False
@@ -614,12 +619,13 @@ def commandClone():
 
         opts['cwd'] = dir
         execute3("mkdir -p {dir}")
+        print(f"\r>> cloning {name}...", end='', flush=True)
         res = gitCommand("git clone {cloneURL} {name}", 3, **opts)
         if res['code'] == 0:
-            printWithVars2("{greenRepoString}: cloned repo to {absRepoPath}")
+            printWithVars2("\r{greenRepoString}: cloned repo to {absRepoPath}")
         else:
             anyFailures = True
-            printWithVars2("{redRepoString}: error cloning repo to {absRepoPath}")
+            printWithVars2("\r{redRepoString}: error cloning repo to {absRepoPath}")
 
     if dryrun:
         sys.exit(0)
