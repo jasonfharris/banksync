@@ -3,7 +3,12 @@ import setuptools
 with open('README.md') as f:
     long_description = f.read()
 
-version = '0.9.5'
+version = "unknown"
+with open('banksync/banksync.py') as f:
+    for line in f:
+        if line.startswith('__version__'):
+            _, _, version = line.replace("\"", '').replace("'", '').split()
+            break
 
 setuptools.setup(
     name = 'banksync',
