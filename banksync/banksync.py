@@ -370,7 +370,7 @@ def commandSync():
                 print(f"\r>> checking out {hash}...", end='', flush=True)
                 res = gitCommand("git checkout -B {defaultSyncPointBranchName} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
                 if res["code"] == 0:
-                    revNum = getRevNumber(hash, absRepoPath)
+                    revNum = getRevNumber(absRepoPath)
                     printWithVars2("\r{greenRepoString}: successfully checked out revision by {method}: {shortHash} (revision number {revNum})")
                     found = True
                     break
@@ -395,7 +395,7 @@ def commandSync():
                                 print(f"\r>> checking out {ts} ({date})...", end='', flush=True)
                                 res = gitCommand("git checkout -B {branch} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
                                 if res["code"] == 0:
-                                    revNum = getRevNumber(hash, absRepoPath)
+                                    revNum = getRevNumber(absRepoPath)
                                     printWithVars2("{greenRepoString}: successfully checked out revision by {method}: {ts} ({date}) {hash} (revision number {revNum})")
                                     found = True
                                     break
@@ -408,7 +408,7 @@ def commandSync():
                                 print(f"\r>> checking out close {ts} ({date})...", end='', flush=True)
                                 res = gitCommand("git checkout -B {branch} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
                                 if res["code"] == 0:
-                                    revNum = getRevNumber(hash, absRepoPath)
+                                    revNum = getRevNumber(absRepoPath)
                                     printWithVars2("\r{yellowRepoString}: warning checking out revision by closest timestamp.", "red")
                                     printWithVars2("       requested {method}: {ts} ({date})")
                                     printWithVars2("       used      {method}: {closestTimestamp} ({closestDate}) {hash} (revision number {revNum})")

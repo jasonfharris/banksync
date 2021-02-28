@@ -159,7 +159,7 @@ def gitCommand(cmdStr, verbosityThreshold = 3, **kwargs):
         raise Exception(stringWithVars("Bad git result {res}"))
     return res
 
-def getRevNumber(sha, absRepoPath):
+def getRevNumber(absRepoPath):
     res = gitCommand("git rev-list HEAD --count --first-parent", 4, cwd=absRepoPath)
     try:
         num = int(res["stdout"].strip())
