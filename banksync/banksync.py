@@ -13,7 +13,7 @@ from collections import OrderedDict
 from sysexecute import *
 from .banksync_common import *
 
-__version__ = "0.9.5"
+__version__ = "0.9.8"
 
 # --------------------------------------------------------------------------------------------------------------------------
 # Defines
@@ -180,6 +180,7 @@ bankconfig.ini inside this repo.
 This would create the syncrepo as the above command, but the repo would be called syncreponame.
 ''')
 
+
 #  CMD: clone ----------
 
 cloneCmdHelp = 'clone the repos specified in the syncfile'
@@ -192,10 +193,21 @@ This would perform a git clone for each of the repositories specified in the syn
 ''')
 
 
+#  CMD: status ----------
+
+statusCmdHelp = 'reports the status of the repos specified in the syncfile'
+statusCmdDescription = statusCmdHelp
+statusCmdEpilog = wrapParagraphs('''Example usage:
+
+  bank status --syncfile syncfile.wl
+
+This would report the status of each of the repositories specified in the syncfile
+''')
+
 #  CMD: bisect ----------
 
 bisectCmdHelp = 'bisect the syncrepo and sync all repos in the bank to the new state of the syncfile'
-bisectCmdDescription = cloneCmdHelp
+bisectCmdDescription = bisectCmdHelp
 bisectCmdEpilog = wrapParagraphs('''Example usage:
 
   bank bisect --syncfile syncfile.wl reset
@@ -280,6 +292,8 @@ def parseArguments():
     parser_createSyncrepoCmd.add_argument("--syncreponame", metavar="NAME", help='specify the name of the syncrepo', default='auto')
 
     parser_cloneCmd = addSubparser('clone')
+
+    parser_statusCmd = addSubparser('status')
 
     parser_bisectCmd = addSubparser('bisect')
     parser_bisectCmd.add_argument("bisectcmd", metavar="BISECTCMD", nargs='?', help=stringWithVars("the bisect subcommand one of {bisectSubCommands}."), choices=bisectSubCommands, default='log')
@@ -637,6 +651,60 @@ def commandClone():
     commandSync()
 
 
+# --------------------------------------------------------------------------------------------------------------------------
+# command "status"
+# --------------------------------------------------------------------------------------------------------------------------
+
+def commandStatus():
+    checkForSyncRepo(syncFilePath)
+    syncDict = loadSyncFileAsDict(syncFilePath)
+    anyFailures = False
+
+    opts = {'captureStdOutStdErr':False, 'verbosity':verbosity}
+    for repoName in syncDict:
+        repoInfo = syncDict[repoName]
+        absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
+        repoString = paddedRepoName(repoName, list(syncDict.keys()))
+        greenRepoString = colored(repoString, 'green')
+        redRepoString   = colored(repoString, 'red')
+        name = os.path.basename(absRepoPath)
+        dir  = os.path.dirname(absRepoPath)
+        if dryrun:
+            printWithVars2("{repoString} : would give the status of the repo at {absRepoPath}.", dryrun=False)
+            continue
+
+        if not checkForRepo(repoString, absRepoPath):
+            allFound = False
+            anyFailures = True
+            continue
+
+        modifiedCount = getModifiedCount(absRepoPath)
+        stagedCount = getStagedCount(absRepoPath)
+        branchName = getBranchName(absRepoPath)
+        
+        # This is actually dimmed not grey since grey appears like black text for me
+        def greyText(txt):
+            return '\033[2m'+txt+"\033[00m"
+
+        description = "{}: {}".format(greyText("branch"), colored(branchName,'blue')).strip()
+        description = description.strip()
+        
+        if modifiedCount > 0:
+            description = description + ", {}: {}".format(greyText("modified"),modifiedCount).strip()
+        if stagedCount > 0:
+            description = description + ", {}: {}".format(greyText("staged"),stagedCount).strip()
+        print(f"{greenRepoString} : {description}")
+
+    if dryrun:
+        sys.exit(0)
+    if anyFailures:
+        print(colored("failure! not all repos reported the status correctly.", 'red'))
+        sys.exit(1)
+
+    print(colored("success! all repos status reported.", 'green'))
+
+
+
 
 # --------------------------------------------------------------------------------------------------------------------------
 # a git command
@@ -688,6 +756,8 @@ def dispatchCommand(command):
         commandSync()
     if command == "clone":
         commandClone()
+    if command == "status":
+        commandStatus()
     if command == "recordRepos":
         commandRecordRepos()
     if command == "createSyncfile":

@@ -108,7 +108,7 @@ def paddedRepoName(repoName, names):
     maxRepoNameLength = 0                     # maxRepoNameLength
     for name in names:
         maxRepoNameLength = max(maxRepoNameLength, len(name))
-    return repoName.ljust(maxRepoNameLength+1)
+    return repoName.ljust(maxRepoNameLength)
 
 def checkForRepo(repoString, absRepoPath):
     if not os.path.isdir(absRepoPath):
@@ -172,6 +172,24 @@ def getCurrentRevHash(absRepoPath):
     if isSha1Str(res['stdout']):
         return res['stdout']
     return '0'*40
+
+def getBranchName(absRepoPath):
+    res = gitCommand("git rev-parse --abbrev-ref HEAD", 4, cwd=absRepoPath, verbosity=1)
+    return res['stdout'].strip()
+
+def getModifiedCount(absRepoPath):
+    res = gitCommand("git ls-files --modified --exclude-standard --directory", 4, cwd=absRepoPath, verbosity=1)
+    ans = res['stdout'].strip()
+    if not ans:
+        return 0
+    return len(ans.split('\n'))
+
+def getStagedCount(absRepoPath):
+    res = gitCommand("git diff --name-only --cached", 4, cwd=absRepoPath, verbosity=1)
+    ans = res['stdout'].strip()
+    if not ans:
+        return 0
+    return len(ans.split('\n'))
 
 
 

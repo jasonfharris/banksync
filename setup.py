@@ -3,6 +3,7 @@ import setuptools
 with open('README.md') as f:
     long_description = f.read()
 
+# Read the version number from banksync.py so we only need to specify it in a single place
 version = "unknown"
 with open('banksync/banksync.py') as f:
     for line in f:
