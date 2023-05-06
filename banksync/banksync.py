@@ -45,7 +45,7 @@ defaultOptions = {
     }
 }
 
-sync_commands = ['sync', 'recordRepos', 'createSyncfile', 'createSyncrepo', 'bisect', 'clone', 'git', 'gitall']
+sync_commands = ['sync', 'recordRepos', 'createSyncfile', 'createSyncrepo', 'bisect', 'populate', 'git', 'gitall']
 approved_git_commands = ['reset', 'log', 'status', 'branch', 'checkout', 'commit', 'tag', 'diff', 'fetch',
                          'push', 'pull', 'prune', 'gc', 'fsck', 'ls-files', 'ls-remote', 'ls-tree']
                          
@@ -181,13 +181,13 @@ This would create the syncrepo as the above command, but the repo would be calle
 ''')
 
 
-#  CMD: clone ----------
+#  CMD: populate ----------
 
-cloneCmdHelp = 'clone the repos specified in the syncfile'
-cloneCmdDescription = cloneCmdHelp
-cloneCmdEpilog = wrapParagraphs('''Example usage:
+populateCmdHelp = 'populate the repos specified in the syncfile'
+populateCmdDescription = populateCmdHelp
+populateCmdEpilog = wrapParagraphs('''Example usage:
 
-  bank clone --syncfile syncfile.wl
+  bank populate --syncfile syncfile.wl
 
 This would perform a git clone for each of the repositories specified in the syncfile
 ''')
@@ -291,7 +291,7 @@ def parseArguments():
     parser_createSyncrepoCmd.add_argument("--syncfilename", metavar="NAME", help='specify the name and extension of the syncfile', default='auto')
     parser_createSyncrepoCmd.add_argument("--syncreponame", metavar="NAME", help='specify the name of the syncrepo', default='auto')
 
-    parser_cloneCmd = addSubparser('clone')
+    parser_populateCmd = addSubparser('populate')
 
     parser_statusCmd = addSubparser('status')
 
@@ -605,10 +605,10 @@ def commandBisect(command):
 
 
 # --------------------------------------------------------------------------------------------------------------------------
-# command "clone"
+# command "populate"
 # --------------------------------------------------------------------------------------------------------------------------
 
-def commandClone():
+def commandPopulate():
     checkForSyncRepo(syncFilePath)
     syncDict = loadSyncFileAsDict(syncFilePath)
     anyFailures = False
@@ -644,10 +644,10 @@ def commandClone():
     if dryrun:
         sys.exit(0)
     if anyFailures:
-        print(colored("failure! not all repos cloned.", 'red'))
+        print(colored("failure! not all repos populated.", 'red'))
         sys.exit(1)
 
-    print(colored("success! all repos cloned.", 'green'))
+    print(colored("success! all repos populated.", 'green'))
     commandSync()
 
 
@@ -754,8 +754,8 @@ def distributeGitCommand(command, includeSyncRepo=False, *remainingArgs):
 def dispatchCommand(command):
     if command == "sync":
         commandSync()
-    if command == "clone":
-        commandClone()
+    if command == "populate":
+        commandPopulate()
     if command == "status":
         commandStatus()
     if command == "recordRepos":

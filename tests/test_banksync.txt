@@ -236,14 +236,14 @@ True
 True
 
 
-# Test clone
+# Test populate
 
 >>> ans = execute4('rm -rf repoFish repoBird')
 
 >>> ans = execute4('git checkout {zooFinal}', cwd='zoosyncrepo')
 >>> zooFinal == currentHash('zoosyncrepo')
 True
->>> ans = execute4('../bank_local clone', cwd='zoosyncrepo')
+>>> ans = execute4('../bank_local populate', cwd='zoosyncrepo')
 >>> 'a27368bec17373938b1dcf73638945b89b60a9d0' == currentHash('repoFish')
 True
 >>> '6bf9d646b2aa224b64fb86cbddb4d7ab0f2e37d3' == currentHash('repoBird')
