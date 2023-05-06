@@ -248,3 +248,6 @@ True
 True
 >>> '6bf9d646b2aa224b64fb86cbddb4d7ab0f2e37d3' == currentHash('repoBird')
 True
+
+# Clean up
+>>> ans = execute4('rm -rf repoFish repoBird repoSyncFile zoosyncrepo')

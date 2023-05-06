@@ -237,3 +237,6 @@ True
 >>> ans = execute4('../bank_local gitall checkout master', cwd='repoSyncFile')
 >>> syncPoint3 == currentHash('repoSyncFile')
 True
+
+# Clean up
+>>> ans = execute4('rm -rf repoFish repoBird repoSyncFile zoosyncrepo testFido')

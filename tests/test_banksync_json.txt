@@ -237,3 +237,5 @@ True
 >>> syncPoint3 == currentHash('repoSyncFile')
 True
 
+# Clean up
+>>> ans = execute4('rm -rf repoFish repoBird repoSyncFile zoosyncrepo')

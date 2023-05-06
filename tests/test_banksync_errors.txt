@@ -40,3 +40,6 @@ True
 >>> ans = execute4('./bank_local createSyncrepo --syncreponame repoBob repoFish repoBird', ignoreErrors=True)
 >>> bool(re.search('failure! The directory .*repoBob already exists', ans[1], re.DOTALL))
 True
+
+# Clean up
+>>> ans = execute4('rm -rf repoFish repoBird repoSyncFile repoBob')
