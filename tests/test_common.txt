@@ -24,7 +24,7 @@
 >>> mergeOptionDicts(iniDict, newDict)
 {'DEFAULT': {}, 'section1': {'key1': 'value1', 'key2': 'fish', 'key3': 'value3'}, 'section2': {'keya': 'bird', 'keyb': 'valueB', 'keyc': 'valueC'}, 'section3': {'foo': 'x', 'bar': 'y', 'baz': 'z'}}
 
->>> escape_ansi(colored("hello",'red'))
+>>> escapeAnsi(colored("hello",'red'))
 'hello'
 
 >>> correctlyQuoteArg('onewholeitem')

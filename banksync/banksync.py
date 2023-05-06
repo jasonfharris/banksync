@@ -379,7 +379,7 @@ def commandSync():
             if (method == "UnixTimeStamp") and ("UnixTimeStamp" in repoInfo):
                 if (matching == 'timestamp') or (matching == 'closetimestamp'):
                     ts = repoInfo["UnixTimeStamp"]
-                    date = dateFromTimeStamp(ts)
+                    date = dateFromTimestamp(ts)
                     if dryrun:
                         printWithVars2("{repoString}: would try and check out revision by {method}: {ts} ({date})", dryrun=False)
                         break
@@ -402,7 +402,7 @@ def commandSync():
                         else:
                             if matching == 'closetimestamp':
                                 closestTimestamp = min(timestampsToShas, key=lambda x:abs(int(x)-int(ts)))
-                                closestDate = dateFromTimeStamp(closestTimestamp)
+                                closestDate = dateFromTimestamp(closestTimestamp)
                                 hash = timestampsToShas[closestTimestamp]
                                 branch=defaultSyncPointBranchName
                                 print(f"\r>> checking out close {ts} ({date})...", end='', flush=True)

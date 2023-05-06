@@ -28,14 +28,13 @@ autoNum = -1       # an arbitrary negative number to stand in for 'auto' in a nu
 # Utilities
 # --------------------------------------------------------------------------------------------------------------------------
 
-def multiple_replace(dict, text):
-  # Create a regular expression  from the dictionary keys
-  regex = re.compile("(%s)" % "|".join(map(re.escape, dict.keys())))
+def multipleReplace(mapping, text):
+    """Replace multiple substrings in 'text' according to the given 'mapping' dictionary."""
+    regex = re.compile("(%s)" % "|".join(map(re.escape, mapping.keys())))
+    return regex.sub(lambda mo: mapping[mo.string[mo.start():mo.end()]], text)
 
-  # For each match, look-up corresponding value in dictionary
-  return regex.sub(lambda mo: dict[mo.string[mo.start():mo.end()]], text) 
-
-def dateFromTimeStamp(ts):
+def dateFromTimestamp(ts):
+    """Convert a Unix timestamp 'ts' to a formatted date string."""
     return datetime.datetime.fromtimestamp(int(ts)).strftime('%Y-%m-%d %H:%M:%S')
 
 def isSha1Str(s):
@@ -55,7 +54,8 @@ def wrapParagraphs(text):
     wrappedParas = [textwrap.fill(para, 80) for para in paras]
     return "\n\n".join(wrappedParas)
 
-def escape_ansi(line):
+def escapeAnsi(line):
+    """Remove ANSI escape codes from the input 'line'."""
     ansi_escape = re.compile(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]')
     return ansi_escape.sub('', line)
 
@@ -291,7 +291,7 @@ def loadSyncFileAsDict(syncFilePath):
                 '}' :']',
                 '->' :':'
             }
-            jsonTxt = multiple_replace(replacements,txt)
+            jsonTxt = multipleReplace(replacements,txt)
         else:
             jsonTxt = txt
         syncDict = json.loads(jsonTxt, object_pairs_hook=OrderedDict)
