@@ -39,17 +39,19 @@ def dateFromTimeStamp(ts):
     return datetime.datetime.fromtimestamp(int(ts)).strftime('%Y-%m-%d %H:%M:%S')
 
 def isSha1Str(s):
-    return True if re.match( r'^[0-9a-fA-F]{40}$', s) else False
+    """Check if the given string 's' is a valid SHA-1 hash."""
+    return True if re.match(r'^[0-9a-fA-F]{40}$', s) else False
 
 def correctlyQuoteArg(arg):
-    """quote any string that has white space in it"""
+    """Quote the input 'arg' if it contains whitespace characters."""
     m = re.match(r'.*\s+.*', arg)
     if m:
         return '"{}"'.format(arg)
     return arg
 
-def wrapParagraphs(str):
-    paras = str.split('\n\n')
+def wrapParagraphs(text):
+    """Wrap the paragraphs of a given 'text' to fit within an 80-character width."""
+    paras = text.split('\n\n')
     wrappedParas = [textwrap.fill(para, 80) for para in paras]
     return "\n\n".join(wrappedParas)
 
@@ -161,6 +163,7 @@ def gitCommand(cmdStr, verbosityThreshold = 3, **kwargs):
     return res
 
 def getRevNumber(absRepoPath):
+    """Return the revision number of the repository at the given path."""
     res = gitCommand("git rev-list HEAD --count --first-parent", 4, cwd=absRepoPath)
     try:
         num = int(res["stdout"].strip())
@@ -169,16 +172,19 @@ def getRevNumber(absRepoPath):
         return "(unknown)"
 
 def getCurrentRevHash(absRepoPath):
+    """Return the current revision hash of the repository at the given path."""
     res = gitCommand("git log HEAD -n 1 --date=iso --format=format:'%H'", 4, cwd=absRepoPath, verbosity=1)
     if isSha1Str(res['stdout']):
         return res['stdout']
     return '0'*40
 
 def getBranchName(absRepoPath):
+    """Return the current branch name of the repository at the given path."""
     res = gitCommand("git rev-parse --abbrev-ref HEAD", 4, cwd=absRepoPath, verbosity=1)
     return res['stdout'].strip()
 
 def getModifiedCount(absRepoPath):
+    """Return the count of modified files in the repository at the given path."""
     res = gitCommand("git ls-files --modified --exclude-standard --directory", 4, cwd=absRepoPath, verbosity=1)
     ans = res['stdout'].strip()
     if not ans:
@@ -186,6 +192,7 @@ def getModifiedCount(absRepoPath):
     return len(ans.split('\n'))
 
 def getStagedCount(absRepoPath):
+    """Return the count of staged files in the repository at the given path."""
     res = gitCommand("git diff --name-only --cached", 4, cwd=absRepoPath, verbosity=1)
     ans = res['stdout'].strip()
     if not ans:
