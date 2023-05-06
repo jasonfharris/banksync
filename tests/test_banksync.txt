@@ -79,7 +79,7 @@
 >>> ans = execute4('git commit -am "committing eagle"', cwd='repoBird')
 >>> eagleHash = currentHash('repoBird')
 
->>> ans = execute4('bank_local recordRepos --syncfile repoSyncFile/syncfile.wl')
+>>> ans = execute4('./bank_local recordRepos --syncfile repoSyncFile/syncfile.wl')
 >>> ans = execute4('git add syncfile.wl', cwd='repoSyncFile')
 >>> ans = execute4('git commit -am "syncPoint3"', cwd='repoSyncFile')
 >>> syncPoint3 = currentHash('repoSyncFile')
@@ -243,7 +243,7 @@ True
 >>> ans = execute4('git checkout {zooFinal}', cwd='zoosyncrepo')
 >>> zooFinal == currentHash('zoosyncrepo')
 True
->>> ans = execute4('../../bank_local clone', cwd='zoosyncrepo')
+>>> ans = execute4('../bank_local clone', cwd='zoosyncrepo')
 >>> 'a27368bec17373938b1dcf73638945b89b60a9d0' == currentHash('repoFish')
 True
 >>> '6bf9d646b2aa224b64fb86cbddb4d7ab0f2e37d3' == currentHash('repoBird')
