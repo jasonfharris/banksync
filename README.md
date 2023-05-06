@@ -1,6 +1,6 @@
 ## Purpose
 
-The banksync command line tool allows the easy operation of git commands across a "bank" or "collection" or repositories. It allows synchronization to historic configurations across the bank of repos.
+`banksync` is a command line tool that simplifies the use of git commands across a "bank" or "collection" of repositories. It enables synchronization of historical configurations throughout the bank of repos.
 
 ## Installation
 
@@ -10,17 +10,16 @@ You can install `banksync` from PyPi with a simple:
 pip install banksync
 ```
 
-## Falsh Start
+## Quick Start
 
-A bank is a collection of repos. The collection of repos is specified in a *syncfile*. The syncfile typically lives in *syncrepo*. So let us demonstrate this with a trivial collection of repos. The overall project will be called `animals` and it will contain a repo `repoFish` and a repo `repoBirds`. The project can live anywhere but to make the description easy let us put the project in the users root directory.
+A bank is a collection of repos defined in a *syncfile*. The syncfile typically resides in a *syncrepo*. In this example, we'll use a project called `animals` containing two repos: `repoFish` and `repoBirds`. The project can be placed anywhere, but for simplicity, we'll put it in the user's root directory.
 
-First, to skip to the very end and get a fully cloned and populated collection of repos, clone the demonstration syncrepo for the animals project using eg:
+To quickly clone and populate the example collection of repos, use the following commands:
 
     cd ~
     bank clone https://github.com/testbank/animalsRepoSync.git animals
 
-This will git clone the thin syncrepo which records the syncfile, and then populates all of the constituent repos. This
-yeilds the overall :
+This will git clone the thin syncrepo, which contains the syncfile, and then populate all constituent repos. The resulting structure will be:
 
     animals
     ├── animalsRepoSync
@@ -33,44 +32,55 @@ yeilds the overall :
 
 Let's walk quickly through what is happening
 
-## Quick Start
+### Step-by-step Walkthrough
 
-The command `bank clone` will do a git clone of the thin sync repo, and then will populate all of the
-constituent repos. Let's do that again in steps.
+Let's break down the quick start process into steps.
 
-So make a directory `animals`:
+1. Create a directory `animals`:
 
-    cd ~
-    sudo rm -r animals
-    mkdir animals
-    cd animals
+   ```
+   cd ~
+   sudo rm -r animals
+   mkdir animals
+   cd animals
+   ```
 
-Now git clone the demonstration syncrepo for the animals project using standard git:
+2. Clone the demonstration syncrepo for the animals project using standard git:
 
-    git clone https://github.com/testbank/animalsRepoSync.git
+   ```
+   git clone https://github.com/testbank/animalsRepoSync.git
+   ```
 
-This will clone the thin repo which records the syncfile over time. Ie it records the state of the repos in the bank at different times / stages. We now have the hierarchy:
+   This clones the thin repo, which records the syncfile over time. It tracks the state of the repos in the bank at different times or stages. The resulting hierarchy is:
 
-    animals
-    └── animalsRepoSync
-        ├── bankconfig.ini
-        └── syncfile.wl
+   ```
+   animals
+   └── animalsRepoSync
+       ├── bankconfig.ini
+       └── syncfile.wl
+   ```
 
-Now we enter into this directory and we populate the repositories in the bank
+3. Populate the repositories in the bank:
 
-    cd animalsRepoSync
-    bank populate
+   ```
+   cd animalsRepoSync
+   bank populate
+   ```
 
-The populate command will git clone each of the repos specified in the syncfile and we will now have the following layout:
+   The `populate` command clones each of the repos specified in the syncfile, resulting in the following layout:
 
-    animals
-    ├── animalsRepoSync
-    │   ├── bankconfig.ini
-    │   └── syncfile.wl
-    ├── repoBird
-    │   └── Bird.txt
-    └── repoFish
-        └── Fish.txt
+   ```
+   animals
+   ├── animalsRepoSync
+   │   ├── bankconfig.ini
+   │   └── syncfile.wl
+   ├── repoBird
+   │   └── Bird.txt
+   └── repoFish
+       └── Fish.txt
+   ```
+
+### issuing commands
 
 We can now issue commands across the repos in the bank. From the syncrepo we can execute:
 
