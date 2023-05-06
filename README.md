@@ -10,17 +10,42 @@ You can install `banksync` from PyPi with a simple:
 pip install banksync
 ```
 
-## Quickstart
+## Falsh Start
 
 A bank is a collection of repos. The collection of repos is specified in a *syncfile*. The syncfile typically lives in *syncrepo*. So let us demonstrate this with a trivial collection of repos. The overall project will be called `animals` and it will contain a repo `repoFish` and a repo `repoBirds`. The project can live anywhere but to make the description easy let us put the project in the users root directory.
+
+First, to skip to the very end and get a fully cloned and populated collection of repos, clone the demonstration syncrepo for the animals project using eg:
+
+    cd ~
+    bank clone https://github.com/testbank/animalsRepoSync.git animals
+
+This will git clone the thin syncrepo which records the syncfile, and then populates all of the constituent repos. This
+yeilds the overall :
+
+    animals
+    ├── animalsRepoSync
+    │   ├── bankconfig.ini
+    │   └── syncfile.wl
+    ├── repoBird
+    │   └── Bird.txt
+    └── repoFish
+        └── Fish.txt
+
+Let's walk quickly through what is happening
+
+## Quick Start
+
+The command `bank clone` will do a git clone of the thin sync repo, and then will populate all of the
+constituent repos. Let's do that again in steps.
 
 So make a directory `animals`:
 
     cd ~
+    sudo rm -r animals
     mkdir animals
     cd animals
 
-Now clone the demonstration syncrepo for the animals project using standard git:
+Now git clone the demonstration syncrepo for the animals project using standard git:
 
     git clone https://github.com/testbank/animalsRepoSync.git
 
@@ -31,12 +56,12 @@ This will clone the thin repo which records the syncfile over time. Ie it record
         ├── bankconfig.ini
         └── syncfile.wl
 
-Now we enter into this directory and we clone the repositories in the bank
+Now we enter into this directory and we populate the repositories in the bank
 
     cd animalsRepoSync
-    bank clone
+    bank populate
 
-The clone command will clone all of the repos specified in the syncfile and we will now have the following layout:
+The populate command will git clone each of the repos specified in the syncfile and we will now have the following layout:
 
     animals
     ├── animalsRepoSync
@@ -204,7 +229,7 @@ You can choose weather to include the `bankconfig.ini` in the syncrepo history o
 
 ## Commands
 
-The form of a bank command is `bank <cmd> <opts>` where `<cmd>` is one of `sync`, `recordRepos`, `createSyncfile`, `bisect`, `clone`,  `git` or `gitall` 
+The form of a bank command is `bank <cmd> <opts>` where `<cmd>` is one of `sync`, `recordRepos`, `createSyncfile`, `bisect`, `populate`,  `git` or `gitall` 
 
 #### bank sync <opts>
 
