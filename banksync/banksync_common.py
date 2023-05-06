@@ -154,10 +154,20 @@ def checkForSyncRepo(syncFilePath):
 # Repo Operations
 # --------------------------------------------------------------------------------------------------------------------------
 
-def gitCommand(cmdStr, verbosityThreshold = 3, **kwargs):
-    opts = merge({'cwd':'.', 'captureStdOutStdErr':True, 'permitShowingStdErr':True, 'permitShowingStdOut':True, 'ignoreErrors':True, 'raiseOnFailure': False, 'verbosity': 3}, kwargs)
-    ( code, sout, serr) = execute(cmdStr, verbosityThreshold, **opts)
-    res = {'code':code, 'stdout':sout, 'stderr':serr }
+def gitCommand(cmdStr, verbosityThreshold=3, **kwargs):
+    """Execute a git command and return the result."""
+    defaultOpts = {
+        'cwd': '.',
+        'captureStdOutStdErr': True,
+        'permitShowingStdErr': True,
+        'permitShowingStdOut': True,
+        'ignoreErrors': True,
+        'raiseOnFailure': False,
+        'verbosity': 3
+    }
+    opts = merge(defaultOpts,kwargs)
+    (code, sout, serr) = execute(cmdStr, verbosityThreshold, **opts)
+    res = {'code': code, 'stdout': sout, 'stderr': serr}
     if opts['raiseOnFailure'] and code != 0:
         raise Exception(f"Bad git result {res}")
     return res
