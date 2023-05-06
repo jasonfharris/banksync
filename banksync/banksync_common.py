@@ -12,6 +12,7 @@ from sysexecute import *
 import datetime
 import configparser
 import textwrap
+from urllib.parse import urlsplit
 
 
 
@@ -194,7 +195,20 @@ def getStagedCount(absRepoPath):
 
 
 # --------------------------------------------------------------------------------------------------------------------------
-# banc bisect helpers
+# URL helpers
+# --------------------------------------------------------------------------------------------------------------------------
+
+def getRepoNameFromUrl(url):
+    """Extract the repository name from a given URL."""
+    urlParts = urlsplit(url)
+    repoNameWithExt = os.path.basename(urlParts.path)
+    repoName, _ = os.path.splitext(repoNameWithExt)
+    return repoName
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------
+# bank bisect helpers
 # --------------------------------------------------------------------------------------------------------------------------
 
 # Given the current branch is say "bobby" then return "bobby", or else if we are in a detached head
