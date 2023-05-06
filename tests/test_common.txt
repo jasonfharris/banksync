@@ -5,6 +5,8 @@
 >>> import sys, os, time
 >>> from sysexecute import *
 
+>>> from test_setup import setup_path
+>>> setup_path()
 >>> from banksync import *
 
 >>> import configparser

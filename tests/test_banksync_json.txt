@@ -5,6 +5,8 @@
 >>> import sys, os, time
 >>> from sysexecute import *
 
+>>> from test_setup import setup_path
+>>> setup_path()
 >>> from banksync import *
 
 >>> set_execute_defaults('verbosity', 2)
@@ -118,7 +120,7 @@ True
 
 >>> ans = execute4('git checkout {syncPoint1}', cwd='repoSyncFile')
 >>> ans = execute4('../../bank_local sync', cwd='repoSyncFile')
->>> ans = execute4('../bank_local createSyncrepo --syncreponame zoosyncrepo --syncfilename joekeeper.json repoFish repoBird')
+>>> ans = execute4('./bank_local createSyncrepo --syncreponame zoosyncrepo --syncfilename joekeeper.json repoFish repoBird')
 >>> ans = execute4('git add joekeeper.json', cwd='zoosyncrepo')
 >>> ans = execute4('git commit -am "inital"', cwd='zoosyncrepo')
 >>> zooInitial = currentHash('zoosyncrepo')

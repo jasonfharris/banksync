@@ -5,6 +5,8 @@
 >>> import sys, os, time
 >>> from sysexecute import *
 
+>>> from test_setup import setup_path
+>>> setup_path()
 >>> from banksync import *
 
 >>> set_execute_defaults('verbosity', 2)
@@ -41,7 +43,7 @@
 >>> ans = execute4('git commit -am "committing sparrow"', cwd='repoBird')
 >>> sparrowHash = currentHash('repoBird')
 
->>> ans = execute4('../bank_local createSyncfile --syncfile repoSyncFile/syncfile.wl repoFish repoBird')
+>>> ans = execute4('./bank_local createSyncfile --syncfile repoSyncFile/syncfile.wl repoFish repoBird')
 >>> ans = execute4('git add syncfile.wl', cwd='repoSyncFile')
 >>> ans = execute4('git commit -am "syncPoint1"', cwd='repoSyncFile')
 >>> syncPoint1 = currentHash('repoSyncFile')
@@ -59,7 +61,7 @@
 >>> ans = execute4('git commit -am "committing hawk"', cwd='repoBird')
 >>> hawkHash = currentHash('repoBird')
 
->>> ans = execute4('../bank_local recordRepos --syncfile repoSyncFile/syncfile.wl')
+>>> ans = execute4('./bank_local recordRepos --syncfile repoSyncFile/syncfile.wl')
 >>> ans = execute4('git add syncfile.wl', cwd='repoSyncFile')
 >>> ans = execute4('git commit -am "syncPoint2"', cwd='repoSyncFile')
 >>> syncPoint2 = currentHash('repoSyncFile')
@@ -77,7 +79,7 @@
 >>> ans = execute4('git commit -am "committing eagle"', cwd='repoBird')
 >>> eagleHash = currentHash('repoBird')
 
->>> ans = execute4('../bank_local recordRepos --syncfile repoSyncFile/syncfile.wl')
+>>> ans = execute4('bank_local recordRepos --syncfile repoSyncFile/syncfile.wl')
 >>> ans = execute4('git add syncfile.wl', cwd='repoSyncFile')
 >>> ans = execute4('git commit -am "syncPoint3"', cwd='repoSyncFile')
 >>> syncPoint3 = currentHash('repoSyncFile')
@@ -89,21 +91,21 @@ True
 # Test roll back
 
 >>> ans = execute4('git checkout {syncPoint1}', cwd='repoSyncFile')
->>> ans = execute4('../bank_local sync --syncfile repoSyncFile/syncfile.wl')
+>>> ans = execute4('./bank_local sync --syncfile repoSyncFile/syncfile.wl')
 >>> troutHash == currentHash('repoFish')
 True
 >>> sparrowHash == currentHash('repoBird')
 True
 
 >>> ans = execute4('git checkout {syncPoint2}', cwd='repoSyncFile')
->>> ans = execute4('../bank_local sync --syncfile repoSyncFile/syncfile.wl')
+>>> ans = execute4('./bank_local sync --syncfile repoSyncFile/syncfile.wl')
 >>> snapperHash == currentHash('repoFish')
 True
 >>> hawkHash == currentHash('repoBird')
 True
 
 >>> ans = execute4('git checkout master', cwd='repoSyncFile')
->>> ans = execute4('../bank_local sync --syncfile repoSyncFile/syncfile.wl')
+>>> ans = execute4('./bank_local sync --syncfile repoSyncFile/syncfile.wl')
 >>> salmonHash == currentHash('repoFish')
 True
 >>> eagleHash == currentHash('repoBird')
@@ -115,26 +117,26 @@ True
 >>> ans = execute4('rm -rf zoosyncrepo')
 
 >>> ans = execute4('git checkout {syncPoint1}', cwd='repoSyncFile')
->>> ans = execute4('../bank_local sync --syncfile repoSyncFile/syncfile.wl')
->>> ans = execute4('../bank_local createSyncrepo --syncreponame zoosyncrepo --syncfilename joekeeper.json repoFish repoBird')
+>>> ans = execute4('./bank_local sync --syncfile repoSyncFile/syncfile.wl')
+>>> ans = execute4('./bank_local createSyncrepo --syncreponame zoosyncrepo --syncfilename joekeeper.json repoFish repoBird')
 >>> ans = execute4('git add joekeeper.json', cwd='zoosyncrepo')
 >>> ans = execute4('git commit -am "inital"', cwd='zoosyncrepo')
 >>> zooInitial = currentHash('zoosyncrepo')
 
->>> ans = execute4('../bank_local git checkout master --syncfile zoosyncrepo/joekeeper.json')
->>> ans = execute4('../bank_local recordRepos --syncfile zoosyncrepo/joekeeper.json')
+>>> ans = execute4('./bank_local git checkout master --syncfile zoosyncrepo/joekeeper.json')
+>>> ans = execute4('./bank_local recordRepos --syncfile zoosyncrepo/joekeeper.json')
 >>> ans = execute4('git commit -am "final"', cwd='zoosyncrepo')
 >>> zooFinal = currentHash('zoosyncrepo')
 
 >>> ans = execute4('git checkout {zooInitial}', cwd='zoosyncrepo')
->>> ans = execute4('../bank_local sync --syncfile zoosyncrepo/joekeeper.json')
+>>> ans = execute4('./bank_local sync --syncfile zoosyncrepo/joekeeper.json')
 >>> troutHash == currentHash('repoFish')
 True
 >>> sparrowHash == currentHash('repoBird')
 True
 
 >>> ans = execute4('git checkout {zooFinal}', cwd='zoosyncrepo')
->>> ans = execute4('../bank_local sync --syncfile zoosyncrepo/joekeeper.json')
+>>> ans = execute4('./bank_local sync --syncfile zoosyncrepo/joekeeper.json')
 >>> salmonHash == currentHash('repoFish')
 True
 >>> eagleHash == currentHash('repoBird')
@@ -143,20 +145,20 @@ True
 
 # Test bisect
 
->>> ans = execute4('../bank_local gitall --syncfile repoSyncFile/syncfile.wl checkout master')
->>> ans = execute4('../bank_local bisect --syncfile repoSyncFile/syncfile.wl start')
->>> ans = execute4('../bank_local bisect --syncfile repoSyncFile/syncfile.wl good {syncPoint1}')
->>> ans = execute4('../bank_local bisect --syncfile repoSyncFile/syncfile.wl bad {syncPoint3}')
+>>> ans = execute4('./bank_local gitall --syncfile repoSyncFile/syncfile.wl checkout master')
+>>> ans = execute4('./bank_local bisect --syncfile repoSyncFile/syncfile.wl start')
+>>> ans = execute4('./bank_local bisect --syncfile repoSyncFile/syncfile.wl good {syncPoint1}')
+>>> ans = execute4('./bank_local bisect --syncfile repoSyncFile/syncfile.wl bad {syncPoint3}')
 >>> syncPoint2 == currentHash('repoSyncFile')
 True
->>> ans = execute4('../bank_local bisect --syncfile repoSyncFile/syncfile.wl good {syncPoint2}')
+>>> ans = execute4('./bank_local bisect --syncfile repoSyncFile/syncfile.wl good {syncPoint2}')
 >>> bool(re.search(syncPoint3.strip() + ' is the first bad commit', ans[1]))
 True
 >>> snapperHash == currentHash('repoFish')
 True
 >>> hawkHash == currentHash('repoBird')
 True
->>> ans = execute4('../bank_local bisect --syncfile repoSyncFile/syncfile.wl reset')
+>>> ans = execute4('./bank_local bisect --syncfile repoSyncFile/syncfile.wl reset')
 >>> syncPoint3 == currentHash('repoSyncFile')
 True
 >>> salmonHash == currentHash('repoFish')
@@ -169,7 +171,7 @@ True
 
 update client repos to master, and sync repo to syncPoint1
 >>> ans = execute4('git checkout master', cwd='repoSyncFile')
->>> ans = execute4('../bank_local sync --syncfile repoSyncFile/syncfile.wl')
+>>> ans = execute4('./bank_local sync --syncfile repoSyncFile/syncfile.wl')
 >>> ans = execute4('git checkout {syncPoint1}', cwd='repoSyncFile')
 
 remove hashes from syncfile.wl
@@ -179,7 +181,7 @@ remove hashes from syncfile.wl
 >>> writeDictToSyncFile('repoSyncFile/syncfile.wl', dict)
 
 verify that sync now correctly updates to the timestamps
->>> ans = execute4('../bank_local sync --syncfile repoSyncFile/syncfile.wl')
+>>> ans = execute4('./bank_local sync --syncfile repoSyncFile/syncfile.wl')
 >>> troutHash == currentHash('repoFish')
 True
 >>> sparrowHash == currentHash('repoBird')
@@ -198,7 +200,7 @@ remove hashes from syncfile.wl and alter the UnixTimeStamps
 >>> writeDictToSyncFile('repoSyncFile/syncfile.wl', dict)
 
 confirm that we get no update unless if we allow only exact timestamps
->>> ans = execute4('../bank_local sync --syncfile repoSyncFile/syncfile.wl --matching timestamp', ignoreErrors=True)
+>>> ans = execute4('./bank_local sync --syncfile repoSyncFile/syncfile.wl --matching timestamp', ignoreErrors=True)
 >>> bool(re.search('failure! not all repos checked out to the specified sync state.', ans[1]))
 True
 >>> troutHash == currentHash('repoFish')
@@ -207,7 +209,7 @@ True
 True
 
 confirm that we get the correct update if we allow close timestamps
->>> ans = execute4('../bank_local sync --syncfile repoSyncFile/syncfile.wl --matching closetimestamp')
+>>> ans = execute4('./bank_local sync --syncfile repoSyncFile/syncfile.wl --matching closetimestamp')
 >>> snapperHash == currentHash('repoFish')
 True
 >>> hawkHash == currentHash('repoBird')
@@ -217,19 +219,19 @@ True
 # Do bank git checkout master
 
 >>> ans = execute4('git checkout {syncPoint1} --force', cwd='repoSyncFile')
->>> ans = execute4('../bank_local sync --syncfile repoSyncFile/syncfile.wl')
+>>> ans = execute4('./bank_local sync --syncfile repoSyncFile/syncfile.wl')
 >>> troutHash == currentHash('repoFish')
 True
 >>> sparrowHash == currentHash('repoBird')
 True
->>> ans = execute4('../bank_local git --syncfile repoSyncFile/syncfile.wl checkout master')
+>>> ans = execute4('./bank_local git --syncfile repoSyncFile/syncfile.wl checkout master')
 >>> salmonHash == currentHash('repoFish')
 True
 >>> eagleHash == currentHash('repoBird')
 True
 >>> syncPoint1 == currentHash('repoSyncFile')
 True
->>> ans = execute4('../bank_local gitall --syncfile repoSyncFile/syncfile.wl checkout master')
+>>> ans = execute4('./bank_local gitall --syncfile repoSyncFile/syncfile.wl checkout master')
 >>> syncPoint3 == currentHash('repoSyncFile')
 True
 
