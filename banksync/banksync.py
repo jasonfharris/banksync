@@ -817,28 +817,25 @@ def distributeGitCommand():
 # --------------------------------------------------------------------------------------------------------------------------
 
 def dispatchCommand():
-    command = _config['args.command']
-    if command == "sync":
-        commandSync()
-    if command == "clone":
-        commandClone()
-    if command == "populate":
-        commandPopulate()
-    if command == "status":
-        commandStatus()
-    if command == "record_repos":
-        commandRecordRepos()
-    if command == "create_syncfile":
-        commandCreateSyncfile()
-    if command == "create_syncrepo":
-        commandCreateSyncrepo()
-    if command == "bisect":
-        commandBisect()
-    if command == "git":
-        distributeGitCommand()
-    if command == "gitall":
-        distributeGitCommand()
+    command_map = {
+        "sync": commandSync,
+        "clone": commandClone,
+        "populate": commandPopulate,
+        "status": commandStatus,
+        "record_repos": commandRecordRepos,
+        "create_syncfile": commandCreateSyncfile,
+        "create_syncrepo": commandCreateSyncrepo,
+        "bisect": commandBisect,
+        "git": distributeGitCommand,
+        "gitall": distributeGitCommand,
+    }
 
+    command = _config['args.command']
+    if command in command_map:
+        command_map[command]()
+    else:
+        printWithVars1(f"failure! unkown command {command}.", 'red')
+        sys.exit(1)
 
 
 # --------------------------------------------------------------------------------------------------------------------------
