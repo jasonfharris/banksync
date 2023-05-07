@@ -26,9 +26,9 @@ defaultSyncPointBranchName = "syncPoint"
 # --------------------------------------------------------------------------------------------------------------------------
 
 defaultOptions = {
-    'General' : {
+    'general' : {
         'cwd' : '.',
-        'syncfile' : 'syncfile.wl',
+        'syncfile' : 'syncfile.json',
         'verbosity' : 2,
         'colorize' : 'yes',
         'seperator' : ' '
@@ -356,13 +356,23 @@ def _red(text):
 def _yellow(text):
     return colored(text, 'yellow')
 
+# def _green(text):
+#     if not colorize:
+#         return colored(text, 'green')
+# def _red(text):
+#     if not colorize:
+#         return colored(text, 'red')
+# def _yellow(text):
+#     if not colorize:
+#         return colored(text, 'yellow')
+
 
 # --------------------------------------------------------------------------------------------------------------------------
 # command "sync"
 # --------------------------------------------------------------------------------------------------------------------------
 
 def commandSync():
-    matching = resolvedOpts['sync']['matching']
+    matching = resolvedOpts['sync.matching']
     checkForSyncRepo(syncFilePath)
     syncDict = loadSyncFileAsDict(syncFilePath)
     allFound = True
@@ -413,7 +423,7 @@ def commandSync():
                                 hash = timestampsToShas[ts]
                                 branch=defaultSyncPointBranchName
                                 print(f"\r>> checking out {ts} ({date})...", end='', flush=True)
-                                res = gitCommand("git checkout -B {branch} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
+                                res = gitCommand(f"git checkout -B {branch} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
                                 if res["code"] == 0:
                                     revNum = getRevNumber(absRepoPath)
                                     printWithVars2(f"{_green(repoString)}: successfully checked out revision by {method}: {ts} ({date}) {hash} (revision number {revNum})")
@@ -534,8 +544,8 @@ def commandCreateSyncfile(repoNames):
 def commandCreateSyncrepo(repoNames):
     global syncFilePath
     global syncRepoPath
-    syncfilename = resolvedOpts['createSyncrepo']['syncfilename']
-    syncreponame = resolvedOpts['createSyncrepo']['syncreponame']
+    syncfilename = resolvedOpts['createsyncrepo.syncfilename']
+    syncreponame = resolvedOpts['createsyncrepo.syncreponame']
     syncRepoPath = os.path.abspath(syncreponame)
     syncFilePath = os.path.join(syncRepoPath, syncfilename)
     configFilePath = os.path.join(syncRepoPath, 'bankconfig.ini')
@@ -550,7 +560,7 @@ def commandCreateSyncrepo(repoNames):
 
     os.makedirs(syncRepoPath)
     with open(configFilePath, 'w') as f:
-        f.write(f"[General]\ncwd=..\nsyncFile={syncfilename}")
+        f.write(f"[general]\ncwd=..\nsyncFile={syncfilename}")
     execute2("git init", cwd=syncRepoPath)
 
     commandCreateSyncfile(repoNames)
@@ -712,13 +722,10 @@ def commandStatus():
     syncDict = loadSyncFileAsDict(syncFilePath)
     anyFailures = False
 
-    opts = {'captureStdOutStdErr':False, 'verbosity':verbosity}
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
         absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
         repoString = paddedRepoName(repoName, list(syncDict.keys()))
-        name = os.path.basename(absRepoPath)
-        dir  = os.path.dirname(absRepoPath)
         if dryrun:
             printWithVars2(f"{repoString} : would give the status of the repo at {absRepoPath}.", dryrun=False)
             continue
@@ -768,7 +775,7 @@ def distributeGitCommand(command, includeSyncRepo=False, *remainingArgs):
 
     gitCmd = "git " + command + " " + " ".join(remainingArgs)
     gitCmd = gitCmd.strip()
-    gitRepoSeperatorString = (resolvedOpts['General']['seperator']*40)[0:40]
+    gitRepoSeperatorString = (resolvedOpts['general.seperator']*40)[0:40]
     checkForSyncRepoDir(syncRepoPath)
     syncDict = loadSyncFileAsDict(syncFilePath)
     anyFailures = False
@@ -830,9 +837,9 @@ def dispatchCommand(command):
 
 def getResolvedOptions(args):
     
-    bankOptions = dict(defaultOptions)
+    bankOptions = flattenDict(dict(defaultOptions))
     if os.path.isfile('~/.bankconfigrc'):
-        newOptions = getOptionDictFromIniFile('~/.bankconfigrc')
+        newOptions = flattenDict(getOptionDictFromIniFile('~/.bankconfigrc'))
         bankOptions = mergeOptionDicts(bankOptions, newOptions)
 
     # Get the config file path
@@ -841,11 +848,11 @@ def getResolvedOptions(args):
     else:
         configFile = os.path.abspath('bankconfig.ini')    
     if os.path.isfile(configFile):
-        newOptions = getOptionDictFromIniFile(configFile)
+        newOptions = flattenDict(getOptionDictFromIniFile(configFile))
         bankOptions = mergeOptionDicts(bankOptions, newOptions)
 
     passedInOptions = {
-        'General' : {
+        'general' : {
             'cwd' : getattr(args, 'cwd', 'auto'),
             'syncfile' : getattr(args, 'syncfile', 'auto'),
             'verbosity' : getattr(args, 'verbosity', autoNum),
@@ -855,17 +862,17 @@ def getResolvedOptions(args):
         'sync' : {
             'matching' : getattr(args, 'matching', 'auto')
         },
-        'createSyncrepo' : {
+        'createsyncrepo' : {
             'syncfilename' : getattr(args, 'syncfilename', 'auto'),
             'syncreponame' : getattr(args, 'syncreponame', 'auto')
         }
     }
     
-    bankOptions = mergeOptionDicts(bankOptions, passedInOptions)
+    bankOptions = mergeOptionDicts(bankOptions, flattenDict(passedInOptions))
     
     # normalize non-string options
-    bankOptions['General']['verbosity'] = int(bankOptions['General']['verbosity'])
-    bankOptions['General']['colorize'] = True if (bankOptions['General']['colorize'].lower() in ['yes','true']) else False
+    bankOptions['general.verbosity'] = int(bankOptions['general.verbosity'])
+    bankOptions['general.colorize'] = True if (bankOptions['general.colorize'].lower() in ['yes','true']) else False
 
     return bankOptions
 
@@ -876,10 +883,14 @@ def main():
 
     command = args.subparser_name
     resolvedOpts = getResolvedOptions(args)
-    cwd = resolvedOpts['General']['cwd']
-    verbosity = resolvedOpts['General']['verbosity']
-    colorize = resolvedOpts['General']['colorize']
-    syncFilePath = resolvedOpts['General']['syncfile']
+    _config = dict(resolvedOpts)
+    _config['args'] = vars(args)
+    _config = flattenDict(_config)
+
+    cwd = resolvedOpts['general.cwd']
+    verbosity = resolvedOpts['general.verbosity']
+    colorize = resolvedOpts['general.colorize']
+    syncFilePath = resolvedOpts['general.syncfile']
     syncRepoPath = os.path.dirname(os.path.abspath(syncFilePath))
     dryrun = args.dryrun
     set_execute_defaults('verbosity', verbosity)

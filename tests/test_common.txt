@@ -12,17 +12,22 @@
 >>> import configparser
 >>> parser = configparser.ConfigParser()
 >>> parser.read_dict({
-...               'section1': {'key1': 'value1', 'key2': 'value2', 'key3': 'value3'},
-...               'section2': {'keyA': 'valueA', 'keyB': 'valueB', 'keyC': 'valueC'},
-...               'section3': {'foo': 'x', 'bar': 'y', 'baz': 'z'} })
+...               'sec1': {'key1': 'value1', 'key2': 'value2', 'key3': 'value3'},
+...               'sec2': {'keyA': 'valueA', 'keyB': 'valueB', 'keyC': 'valueC'},
+...               'sec3': {'foo': 'x', 'bar': 'y', 'baz': 'z'} })
 
 >>> iniDict = iniParserToOptionDict(parser)
 >>> iniDict
-{'DEFAULT': {}, 'section1': {'key1': 'value1', 'key2': 'value2', 'key3': 'value3'}, 'section2': {'keya': 'valueA', 'keyb': 'valueB', 'keyc': 'valueC'}, 'section3': {'foo': 'x', 'bar': 'y', 'baz': 'z'}}
-    
->>> newDict = nn = {'section1': {'key1': 'auto', 'key2': 'fish'}, 'section2': {'keya': 'bird', 'keyb': 'auto'}}
->>> mergeOptionDicts(iniDict, newDict)
-{'DEFAULT': {}, 'section1': {'key1': 'value1', 'key2': 'fish', 'key3': 'value3'}, 'section2': {'keya': 'bird', 'keyb': 'valueB', 'keyc': 'valueC'}, 'section3': {'foo': 'x', 'bar': 'y', 'baz': 'z'}}
+{'DEFAULT': {}, 'sec1': {'key1': 'value1', 'key2': 'value2', 'key3': 'value3'}, 'sec2': {'keya': 'valueA', 'keyb': 'valueB', 'keyc': 'valueC'}, 'sec3': {'foo': 'x', 'bar': 'y', 'baz': 'z'}}
+
+
+>>> flattenDict(flattenDict(iniDict))
+{'sec1.key1': 'value1', 'sec1.key2': 'value2', 'sec1.key3': 'value3', 'sec2.keya': 'valueA', 'sec2.keyb': 'valueB', 'sec2.keyc': 'valueC', 'sec3.foo': 'x', 'sec3.bar': 'y', 'sec3.baz': 'z'}
+
+
+>>> newDict = nn = {'sec1': {'key1': 'auto', 'key2': 'fish'}, 'sec2': {'keya': 'bird', 'keyb': 'auto'}}
+>>> mergeOptionDicts(flattenDict(iniDict), flattenDict(newDict))
+{'sec1.key1': 'value1', 'sec1.key2': 'fish', 'sec1.key3': 'value3', 'sec2.keya': 'bird', 'sec2.keyb': 'valueB', 'sec2.keyc': 'valueC', 'sec3.foo': 'x', 'sec3.bar': 'y', 'sec3.baz': 'z'}
 
 >>> escapeAnsi(colored("hello",'red'))
 'hello'

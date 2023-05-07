@@ -222,7 +222,7 @@ When attempting to sync the constituent repos to the versions specified in the s
 Instead of specifying the `--syncfile` and`—cwd` in each command you can create a `bankconfig.ini` file alongside the syncfile. In the `bankconfig.ini` file you can specify the default syncfile and cwd to use if none is specified. Eg we could add the file `animals/animalsSyncRepo/bankconfig.ini` with the following contents:
 
 ```
-[General]
+[general]
 cwd=..
 syncFile=syncfile.wl
 ```

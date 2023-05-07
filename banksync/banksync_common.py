@@ -83,17 +83,23 @@ def getOptionDictFromIniFile(configFile):
     config.read(configFile)
     return iniParserToOptionDict(config)
 
+def flattenDict(d, parentKeys=[]):
+    items = {}
+    for k, v in d.items():
+        newKeys = parentKeys + [k.lower()]
+        if isinstance(v, dict):
+            items.update(flattenDict(v, newKeys))
+        else:
+            items['.'.join(newKeys)] = v
+    return items
+
+
 def mergeOptionDicts(d1,d2):
-    """Merge in ini d2 into a copy of d1. Don't overwrite values when the value is 'none'"""
+    """Merge in dict d2 into a copy of d1. Don't overwrite values when the value is 'none'"""
     combined = dict(d1)
-    for sec in d2:
-        for key in d2[sec]:
-            val = d2[sec][key]
-            if not isAutomatic(val):
-                if sec in combined:
-                    combined[sec][key] = val
-                else:
-                    combined[sec] = {key:val}
+    for key, val in d2.items():
+        if not isAutomatic(val):
+            combined[key] = val
     return combined
 
 

@@ -29,7 +29,7 @@
 
 >>> ans = execute4('mkdir repoSyncFile')
 >>> ans = execute4('git init', cwd='repoSyncFile')
->>> ans = execute4('echo "[General]\ncwd=..\nsyncFile=syncfile.json" > repoSyncFile/bankconfig.ini')
+>>> ans = execute4('echo "[general]\ncwd=..\nsyncFile=syncfile.json" > repoSyncFile/bankconfig.ini')
 >>> ans = execute4('git remote add origin https://github.com/testbank/animalsRepoSync.git', cwd='repoSyncFile')
 
 
