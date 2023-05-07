@@ -372,7 +372,7 @@ def _yellow(text):
 # --------------------------------------------------------------------------------------------------------------------------
 
 def commandSync():
-    matching = resolvedOpts['sync.matching']
+    matching = _config['sync.matching']
     checkForSyncRepo(syncFilePath)
     syncDict = loadSyncFileAsDict(syncFilePath)
     allFound = True
@@ -544,8 +544,8 @@ def commandCreateSyncfile(repoNames):
 def commandCreateSyncrepo(repoNames):
     global syncFilePath
     global syncRepoPath
-    syncfilename = resolvedOpts['create_syncrepo.syncfilename']
-    syncreponame = resolvedOpts['create_syncrepo.syncreponame']
+    syncfilename = _config['create_syncrepo.syncfilename']
+    syncreponame = _config['create_syncrepo.syncreponame']
     syncRepoPath = os.path.abspath(syncreponame)
     syncFilePath = os.path.join(syncRepoPath, syncfilename)
     configFilePath = os.path.join(syncRepoPath, 'bankconfig.ini')
@@ -633,11 +633,12 @@ def commandBisect(command):
 
 def commandClone():
     global syncFilePath, syncRepoPath, cwd
-    cloneURL = args.url
+    cloneURL = _config['args.url']
     if not isValidGitUrl(cloneURL):
         print(colored("failure! {cloneURL} appears not to be a URL that works with git clone.", 'red'))
         sys.exit(1)
-    destName = args.name if (args.name is not None) else getRepoNameFromUrl(cloneURL)
+    destName = _config['args.name']
+    destName = destName if (destName is not None) else getRepoNameFromUrl(cloneURL)
     absDestNamePath = getAbsRepoPath(destName, cwd)
 
     execute3("mkdir -p {absDestNamePath}")
@@ -775,7 +776,7 @@ def distributeGitCommand(command, includeSyncRepo=False, *remainingArgs):
 
     gitCmd = "git " + command + " " + " ".join(remainingArgs)
     gitCmd = gitCmd.strip()
-    gitRepoSeperatorString = (resolvedOpts['general.seperator']*40)[0:40]
+    gitRepoSeperatorString = (_config['general.seperator']*40)[0:40]
     checkForSyncRepoDir(syncRepoPath)
     syncDict = loadSyncFileAsDict(syncFilePath)
     anyFailures = False
@@ -878,21 +879,21 @@ def getResolvedOptions(args):
 
 
 def main():
-    global args, remainingArgs, syncFilePath, syncRepoPath, cwd, verbosity, dryrun, resolvedOpts
+    global args, remainingArgs, syncFilePath, syncRepoPath, cwd, verbosity, dryrun, _config
     args, remainingArgs = parseArguments()
 
     command = args.command
-    resolvedOpts = getResolvedOptions(args)
-    _config = dict(resolvedOpts)
+    _config = getResolvedOptions(args)
     _config['args'] = vars(args)
+    _config['remaining_args'] = remainingArgs
     _config = flattenDict(_config)
 
-    cwd = resolvedOpts['general.cwd']
-    verbosity = resolvedOpts['general.verbosity']
-    colorize = resolvedOpts['general.colorize']
-    syncFilePath = resolvedOpts['general.syncfile']
+    cwd = _config['general.cwd']
+    verbosity = _config['general.verbosity']
+    colorize = _config['general.colorize']
+    syncFilePath = _config['general.syncfile']
     syncRepoPath = os.path.dirname(os.path.abspath(syncFilePath))
-    dryrun = args.dryrun
+    dryrun = _config['args.dryrun']
     set_execute_defaults('verbosity', verbosity)
     set_execute_defaults('dryrun', dryrun)
     set_execute_defaults('colorize', colorize)
