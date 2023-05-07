@@ -2,11 +2,9 @@
 # PYTHON_ARGCOMPLETE_OK
 
 import os.path
-import string
 import sys
 import shutil
 import tempfile
-import time
 import re
 import glob
 import json

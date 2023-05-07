@@ -2,10 +2,7 @@
 # PYTHON_ARGCOMPLETE_OK
 
 import os.path
-import string
 import sys
-import time
-import re
 import argparse
 import argcomplete
 import json
