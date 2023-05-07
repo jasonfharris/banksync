@@ -249,5 +249,16 @@ True
 >>> '6bf9d646b2aa224b64fb86cbddb4d7ab0f2e37d3' == currentHash('repoBird')
 True
 
+
+# Test clone
+
+>>> ans = execute4('rm -rf repoFish repoBird repoSyncFile')
+
+>>> ans = execute4('./bank_local clone https://github.com/testbank/animalsRepoSync.git animals')
+>>> 'a27368bec17373938b1dcf73638945b89b60a9d0' == currentHash('animals/repoFish')
+True
+>>> '6bf9d646b2aa224b64fb86cbddb4d7ab0f2e37d3' == currentHash('animals/repoBird')
+True
+
 # Clean up
->>> ans = execute4('rm -rf repoFish repoBird repoSyncFile zoosyncrepo')
+>>> ans = execute4('rm -rf repoFish repoBird repoSyncFile zoosyncrepo animals')
