@@ -46,7 +46,7 @@ def correctlyQuoteArg(arg):
     """Quote the input 'arg' if it contains whitespace characters."""
     m = re.match(r'.*\s+.*', arg)
     if m:
-        return '"{}"'.format(arg)
+        return f'"{arg}"'
     return arg
 
 def wrapParagraphs(text):
@@ -116,31 +116,31 @@ def paddedRepoName(repoName, names):
 
 def checkForRepo(repoString, absRepoPath):
     if not os.path.isdir(absRepoPath):
-        printWithVars1("{repoString} : there is no repository at {absRepoPath}.", 'red')
+        printWithVars1(f"{repoString} : there is no repository at {absRepoPath}.", 'red')
         return False
     if not os.path.isdir(os.path.join(absRepoPath,".git")):
-        printWithVars1("{repoString} : {absRepoPath} is not a git repository.", 'red')
+        printWithVars1(f"{repoString} : {absRepoPath} is not a git repository.", 'red')
         return False
     return True
 
 def checkForSyncRepoFile(syncFilePath):
     if not os.path.isfile(syncFilePath):
         absSyncFilePath = os.path.abspath(syncFilePath)
-        printWithVars1("failure! could not locate the sync file at {absSyncFilePath}.", 'red')
+        printWithVars1(f"failure! could not locate the sync file at {absSyncFilePath}.", 'red')
         sys.exit(1)
 
 def checkForSyncRepoDir(syncRepoPath, existing = True):
     absSyncRepoPath = os.path.abspath(syncRepoPath)
 
     if not os.path.isdir(absSyncRepoPath):
-        printWithVars1("failure! could not locate the syncrepo dir at {absSyncRepoPath}.", 'red')
+        printWithVars1(f"failure! could not locate the syncrepo dir at {absSyncRepoPath}.", 'red')
         sys.exit(1)
 
     if not os.path.isdir(os.path.join(absSyncRepoPath,".git")):
         if existing:
-            printWithVars1("failure! {absSyncRepoPath} is not a git repository consisting of syncfile revisions.", 'red')
+            printWithVars1(f"failure! {absSyncRepoPath} is not a git repository consisting of syncfile revisions.", 'red')
         else:
-            printWithVars1("failure! {absSyncRepoPath} is not a git repository.", 'red')        
+            printWithVars1(f"failure! {absSyncRepoPath} is not a git repository.", 'red')        
         sys.exit(1)
 
 def checkForSyncRepo(syncFilePath):
@@ -354,7 +354,7 @@ def loadSyncFileAsDict(syncFilePath):
             jsonTxt = txt
         syncDict = json.loads(jsonTxt, object_pairs_hook=OrderedDict)
         if not syncDict:
-            printWithVars1("failure! no repos where specified in the sync file at {absSyncFilePath}.", 'red')
+            printWithVars1(f"failure! no repos where specified in the sync file at {absSyncFilePath}.", 'red')
             sys.exit(1)
         return syncDict
 
@@ -366,7 +366,7 @@ def writeDictToSyncFile(syncFilePath, dict):
     path = os.path.abspath(syncFilePath)
     with open(path, 'w') as f:
         f.write(newFileContents)
-    printWithVars3("Wrote new dictionary of bank sync information to {path}")
+    printWithVars3(f"Wrote new dictionary of bank sync information to {path}")
 
 
 def dictFromCurrentRepoState(path, **kwargs):

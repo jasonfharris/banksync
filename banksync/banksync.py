@@ -319,7 +319,7 @@ def parseArguments():
     argcomplete.autocomplete(parser)
 
     def printVersionAndExit():
-        printWithVars1("banksync {__version__}. Author: Jason F Harris.\nhttps://github.com/jasonfharris/banksync")
+        printWithVars1(f"banksync {__version__}. Author: Jason F Harris.\nhttps://github.com/jasonfharris/banksync")
         sys.exit(0)
 
     if len(sys.argv)==1:
@@ -333,7 +333,7 @@ def parseArguments():
     command = args.subparser_name
 
     if (not command in commands) and (not command in allGitCommands):
-        printWithVars1("unknown command: {command}", 'red')
+        printWithVars1(f"unknown command: {command}", 'red')
         sys.exit(1)
 
     remainingArgs = [correctlyQuoteArg(arg) for arg in remainingArgs]
@@ -384,7 +384,7 @@ def commandSync():
                 hash = repoInfo["sha"]
                 shortHash = hash[0:12]
                 if dryrun:
-                    printWithVars2("{repoString}: would try and check out revision by {method}: {shortHash}", dryrun=False)
+                    printWithVars2(f"{repoString}: would try and check out revision by {method}: {shortHash}", dryrun=False)
                     break
                 
                 print(f"\r>> checking out {hash}...", end='', flush=True)
@@ -394,14 +394,14 @@ def commandSync():
                     printWithVars2(f"\r{_green(repoString)}: successfully checked out revision by {method}: {shortHash} (revision number {revNum})")
                     found = True
                     break
-                printWithVars3("\r{repoString}: failed to check out revision by {method}: {hash}")
+                printWithVars3(f"\r{repoString}: failed to check out revision by {method}: {hash}")
 
             if (method == "UnixTimeStamp") and ("UnixTimeStamp" in repoInfo):
                 if (matching == 'timestamp') or (matching == 'closetimestamp'):
                     ts = repoInfo["UnixTimeStamp"]
                     date = dateFromTimestamp(ts)
                     if dryrun:
-                        printWithVars2("{repoString}: would try and check out revision by {method}: {ts} ({date})", dryrun=False)
+                        printWithVars2(f"{repoString}: would try and check out revision by {method}: {ts} ({date})", dryrun=False)
                         break
                     
                     res = gitCommand("git log --all --format=format:'\"%at\" : \"%H\",'", 4, cwd=absRepoPath, raiseOnFailure=True, verbosity=verbosity, permitShowingStdOut=False, permitShowingStdErr=False)
@@ -435,7 +435,7 @@ def commandSync():
                                     found = True
                                     break
 
-                    printWithVars3("\r{repoString}: failed to check out revision by {method}: {ts} {date}")
+                    printWithVars3(f"\r{repoString}: failed to check out revision by {method}: {ts} {date}")
 
         if not found and not dryrun:
             allFound = False
@@ -482,10 +482,10 @@ def commandRecordRepos():
     writeDictToSyncFile(syncFilePath, newSyncDict)
 
     if anyFailures:
-        printWithVars1("failure! not all constituent repos had their state recorded.", 'red')
+        printWithVars1(f"failure! not all constituent repos had their state recorded.", 'red')
         sys.exit(1)
     else:
-        printWithVars1("success! all constituent repos had their state recorded.", 'green')
+        printWithVars1(f"success! all constituent repos had their state recorded.", 'green')
 
 
 
@@ -510,7 +510,7 @@ def commandCreateSyncfile(repoNames):
             date = newRepoInfo["date"]
             printWithVars2(f"{_green(repoString)}: recording repository state of {shortHash}, {date}.")
         else:
-            printWithVars2("failure! not able to get the status of {repoName} at {absRepoPath}", 'red')
+            printWithVars2(f"failure! not able to get the status of {repoName} at {absRepoPath}", 'red')
             anyFailures = True
         newSyncDict[repoName] = newRepoInfo
 
@@ -520,10 +520,10 @@ def commandCreateSyncfile(repoNames):
     writeDictToSyncFile(syncFilePath, newSyncDict)
 
     if anyFailures:
-        printWithVars1("failure! not all constituent repos had their state recorded.", 'red')
+        printWithVars1(f"failure! not all constituent repos had their state recorded.", 'red')
         sys.exit(1)
     else:
-        printWithVars1("success! all constituent repos had their state recorded.", 'green')
+        printWithVars1(f"success! all constituent repos had their state recorded.", 'green')
 
 
 
@@ -541,11 +541,11 @@ def commandCreateSyncrepo(repoNames):
     configFilePath = os.path.join(syncRepoPath, 'bankconfig.ini')
 
     if os.path.isdir(syncRepoPath):
-        printWithVars1("failure! The directory {syncRepoPath} already exists.", 'red')
+        printWithVars1(f"failure! The directory {syncRepoPath} already exists.", 'red')
         sys.exit(1)
 
     if dryrun:
-        printWithVars1("The directory {syncRepoPath} would be created and a git repository would be initilized there. The file {configFilePath} and {syncFilePath} would be created and filled.")
+        printWithVars1(f"The directory {syncRepoPath} would be created and a git repository would be initilized there. The file {configFilePath} and {syncFilePath} would be created and filled.")
         sys.exit(0)
 
     os.makedirs(syncRepoPath)
@@ -568,7 +568,7 @@ def commandBisect(command):
     anyFailures = False
 
     if dryrun:
-        printWithVars2("would try exectue the given bisect command on the current sync repo and sync the bank repos to the new state.")
+        printWithVars2(f"would try exectue the given bisect command on the current sync repo and sync the bank repos to the new state.")
         sys.exit(0)
 
     if command == 'start':
@@ -674,13 +674,13 @@ def commandPopulate():
         repoString = paddedRepoName(repoName, list(syncDict.keys()))
         if not "cloneURL" in repoInfo:
             anyFailures = True
-            printWithVars2("{repoString}: there is no cloneURL for this repo", "red")
+            printWithVars2(f"{repoString}: there is no cloneURL for this repo", "red")
             continue   
         cloneURL = repoInfo["cloneURL"]
         name = os.path.basename(absRepoPath)
         dir  = os.path.dirname(absRepoPath)
         if dryrun:
-            printWithVars2("{repoString}: would clone {cloneURL} to {absRepoPath}.", dryrun=False)
+            printWithVars2(f"{repoString}: would clone {cloneURL} to {absRepoPath}.", dryrun=False)
             continue
 
         opts['cwd'] = dir
@@ -720,7 +720,7 @@ def commandStatus():
         name = os.path.basename(absRepoPath)
         dir  = os.path.dirname(absRepoPath)
         if dryrun:
-            printWithVars2("{repoString} : would give the status of the repo at {absRepoPath}.", dryrun=False)
+            printWithVars2(f"{repoString} : would give the status of the repo at {absRepoPath}.", dryrun=False)
             continue
 
         if not checkForRepo(repoString, absRepoPath):
@@ -736,13 +736,13 @@ def commandStatus():
         def greyText(txt):
             return '\033[2m'+txt+"\033[00m"
 
-        description = "{}: {}".format(greyText("branch"), colored(branchName,'blue')).strip()
+        description = f"{greyText('branch')}: {colored(branchName,'blue')}".strip()
         description = description.strip()
         
         if modifiedCount > 0:
-            description = description + ", {}: {}".format(greyText("modified"),modifiedCount).strip()
+            description = f"{description}, {greyText('modified')}: {modifiedCount}".strip()
         if stagedCount > 0:
-            description = description + ", {}: {}".format(greyText("staged"),stagedCount).strip()
+            description = f"{description}, {greyText('staged')}: {stagedCount}".strip()
         print(f"{_green(repoString)} : {description}")
 
     if dryrun:
@@ -764,7 +764,7 @@ def distributeGitCommand(command, includeSyncRepo=False, *remainingArgs):
     if not command in approved_git_commands:
         printWithVars1(f"{_yellow('warning')}: the git command `{command}` might not make sense being applied non-interactively to each repo in the bank. Use at your own discretion.")
     if not command in allGitCommands:
-        printWithVars1("failure! unknown git command `{command}`", 'red')
+        printWithVars1(f"failure! unknown git command `{command}`", 'red')
 
     gitCmd = "git " + command + " " + " ".join(remainingArgs)
     gitCmd = gitCmd.strip()
@@ -789,10 +789,10 @@ def distributeGitCommand(command, includeSyncRepo=False, *remainingArgs):
         printWithVars2(gitRepoSeperatorString, dryrun=False)
 
     if anyFailures:
-        printWithVars1("failure! not all constituent repos present.", 'red')
+        printWithVars1(f"failure! not all constituent repos present.", 'red')
         sys.exit(1)
     else:
-        printWithVars1("all constituent repos issued git command '{gitCmd}'", 'green')
+        printWithVars1(f"all constituent repos issued git command '{gitCmd}'", 'green')
 
 
 
