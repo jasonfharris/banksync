@@ -10,7 +10,7 @@ from collections import OrderedDict
 from sysexecute import *
 from .banksync_common import *
 
-__version__ = "0.9.9"
+__version__ = "0.9.10"
 
 # --------------------------------------------------------------------------------------------------------------------------
 # Defines
