@@ -302,11 +302,11 @@ def dictFromCurrentRepoState(path, **kwargs):
         res = gitCommand("git remote --verbose", **opts)
         cloneURL = ''
         if not cloneURL:
-            m = re.search('origin\s*(\S+) \(fetch\)', res["stdout"])
+            m = re.search(r'origin\s*(\S+) \(fetch\)', res["stdout"])
             if m:
                 cloneURL = m.group(1)
         if not cloneURL:
-            m = re.search('(\w+)\s*(\S+) \(fetch\)', res["stdout"])
+            m = re.search(r'(\w+)\s*(\S+) \(fetch\)', res["stdout"])
             if m:
                 cloneURL = m.group(1)
         if cloneURL:
