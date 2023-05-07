@@ -282,7 +282,7 @@ def parseArguments():
     parser.add_argument('--version', dest='version', action='store_true', help="Show the version number of the banksync tool and exit")
     parser.set_defaults(version=False)
 
-    subparsers = parser.add_subparsers(title='commands', dest='subparser_name', metavar = '')
+    subparsers = parser.add_subparsers(title='commands', dest='command', metavar = '')
     def addSubparser(name, parent_parsers=[pathOps_parser, commonOpts_parser]):
         return subparsers.add_parser(name, help=eval(name+'CmdHelp'), description=eval(name+'CmdDescription'), epilog=eval(name+'CmdEpilog'), parents = parent_parsers, formatter_class=argparse.RawDescriptionHelpFormatter)
         
@@ -330,7 +330,7 @@ def parseArguments():
         printVersionAndExit()
 
     args, remainingArgs = parser.parse_known_args()
-    command = args.subparser_name
+    command = args.command
 
     if (not command in commands) and (not command in allGitCommands):
         printWithVars1(f"unknown command: {command}", 'red')
@@ -881,7 +881,7 @@ def main():
     global args, remainingArgs, syncFilePath, syncRepoPath, cwd, verbosity, dryrun, resolvedOpts
     args, remainingArgs = parseArguments()
 
-    command = args.subparser_name
+    command = args.command
     resolvedOpts = getResolvedOptions(args)
     _config = dict(resolvedOpts)
     _config['args'] = vars(args)
