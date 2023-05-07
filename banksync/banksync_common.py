@@ -146,7 +146,7 @@ def checkForSyncRepoDir(syncRepoPath, existing = True):
         if existing:
             printWithVars1(f"failure! {absSyncRepoPath} is not a git repository consisting of syncfile revisions.", 'red')
         else:
-            printWithVars1(f"failure! {absSyncRepoPath} is not a git repository.", 'red')        
+            printWithVars1(f"failure! {absSyncRepoPath} is not a git repository.", 'red')
         sys.exit(1)
 
 def checkForSyncRepo(syncFilePath):
@@ -265,7 +265,7 @@ def moveDirectory(srcDir, destDir):
     """Move a directory to a new location, using a temporary directory to avoid issues with moving into a subdirectory."""
     if not os.path.exists(srcDir):
         raise ValueError(f"Source directory {srcDir} does not exist")
-        
+
     if os.path.exists(destDir):
         raise ValueError(f"Destination directory {destDir} already exists")
 
@@ -348,7 +348,7 @@ def loadSyncFileAsDict(syncFilePath):
         return syncDict
 
 def writeDictToSyncFile(syncFilePath, dict):
-    newFileContents = json.dumps(dict, indent=4)    
+    newFileContents = json.dumps(dict, indent=4)
     path = os.path.abspath(syncFilePath)
     with open(path, 'w') as f:
         f.write(newFileContents)
@@ -369,7 +369,7 @@ def dictFromCurrentRepoState(path, **kwargs):
 
         res = gitCommand("git rev-list HEAD --count --first-parent", **opts)
         newRepoInfo["revisionNumber"] = res["stdout"].strip()
-        
+
         res = gitCommand("git log HEAD -n 1 --format=format:\"%B\"", **opts)
         sanitizedMessage = res["stdout"].strip().replace("\"","'").replace("\n","\\n")
         newRepoInfo["message"] = sanitizedMessage
@@ -388,6 +388,6 @@ def dictFromCurrentRepoState(path, **kwargs):
             newRepoInfo["cloneURL"] = cloneURL.strip()
     except:
         succeeded = False
-    
+
     return (succeeded, newRepoInfo)
 

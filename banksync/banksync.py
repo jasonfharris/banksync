@@ -45,7 +45,7 @@ defaultOptions = {
 sync_commands = ['sync', 'record_repos', 'create_syncfile', 'create_syncrepo', 'bisect', 'clone', 'populate', 'git', 'gitall']
 approved_git_commands = ['reset', 'log', 'status', 'branch', 'checkout', 'commit', 'tag', 'diff', 'fetch',
                          'push', 'pull', 'prune', 'gc', 'fsck', 'ls-files', 'ls-remote', 'ls-tree']
-                         
+
 bisectSubCommands = ['start', 'bad', 'new', 'good', 'old', 'terms', 'skip', 'reset', 'visualize', 'replay', 'log', 'run']
 
 # This list was culled from `git help -a`
@@ -230,7 +230,7 @@ gitCmdHelp = 'perform the given git command in each repo in the bank'
 gitCmdDescription = gitCmdHelp
 gitCmdEpilog = wrapParagraphs('''Example usage:
 
-  bank git status --syncfile syncfile.json 
+  bank git status --syncfile syncfile.json
 
 Perform git status and list the results on each of the repositories specified in the syncfile.json
 
@@ -255,7 +255,7 @@ line only works for the common commands.
 
 Example usage:
 
-  bank gitall status --syncfile syncfile.json 
+  bank gitall status --syncfile syncfile.json
 
 Perform git status and list the results on each of the repositories specified in the syncfile.json
 and in addition to the actual repo containing the sync file (the syncrepo)
@@ -268,11 +268,11 @@ repos in the bank and in addition to the actual repo containing the sync file (t
 
 def parseArguments():
 
-    pathOps_parser = argparse.ArgumentParser(add_help=False)                                 
+    pathOps_parser = argparse.ArgumentParser(add_help=False)
     pathOps_parser.add_argument("--syncfile", metavar="SYNCFILE", help="the path to the syncfile", default='auto')
     pathOps_parser.add_argument("--cwd", metavar="CWD", help="prefix / change the working directory for the repos in the sync file", default='auto')
 
-    commonOpts_parser = argparse.ArgumentParser(add_help=False)                                 
+    commonOpts_parser = argparse.ArgumentParser(add_help=False)
     commonOpts_parser.add_argument("--verbosity", metavar="NUM", help="Specify the level of reported feedback / detail. Acceptable values: 1 (minimal feedback), 2 (some feedback) , 3 (detailed feedback), or 4 (full feedback)", type=int, default=autoNum)
     commonOpts_parser.add_argument('--colorize', metavar='BOOL', help=f"Colorize the output: {colorizeOptionValues}", choices=colorizeOptionValues, default='auto')
     commonOpts_parser.add_argument('--dryrun', dest='dryrun', action='store_true', help="Print what would happen instead of performing the command")
@@ -285,7 +285,7 @@ def parseArguments():
     subparsers = parser.add_subparsers(title='commands', dest='command', metavar = '')
     def addSubparser(name, parent_parsers=[pathOps_parser, commonOpts_parser]):
         return subparsers.add_parser(name, help=eval(name+'CmdHelp'), description=eval(name+'CmdDescription'), epilog=eval(name+'CmdEpilog'), parents = parent_parsers, formatter_class=argparse.RawDescriptionHelpFormatter)
-        
+
     parser_syncCmd = addSubparser('sync')
     parser_syncCmd.add_argument("--matching", metavar="MATCH", help=f'specify how we can recognize a revision "match": {matchingOptionValues}', choices=matchingOptionValues, default='auto')
 
@@ -339,7 +339,7 @@ def parseArguments():
     remaining_args = [correctlyQuoteArg(arg) for arg in remaining_args]
     if args.version:
         printVersionAndExit()
-    
+
     return args, remaining_args
 
 
@@ -384,7 +384,7 @@ def commandSync():
         if not checkForRepo(repoString, absRepoPath):
             allFound = False
             continue
-    
+
         found = False
         for method in tryOrder:
             if found:
@@ -396,7 +396,7 @@ def commandSync():
                 if dryrun:
                     printWithVars2(f"{repoString}: would try and check out revision by {method}: {shortHash}", dryrun=False)
                     break
-                
+
                 print(f"\r>> checking out {hash}...", end='', flush=True)
                 res = gitCommand("git checkout -B {defaultSyncPointBranchName} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
                 if res["code"] == 0:
@@ -413,7 +413,7 @@ def commandSync():
                     if dryrun:
                         printWithVars2(f"{repoString}: would try and check out revision by {method}: {ts} ({date})", dryrun=False)
                         break
-                    
+
                     res = gitCommand("git log --all --format=format:'\"%at\" : \"%H\",'", 4, cwd=absRepoPath, raiseOnFailure=True, verbosity=verbosity, permitShowingStdOut=False, permitShowingStdErr=False)
                     shaHash = 0
                     if res["code"] == 0:
@@ -485,10 +485,10 @@ def commandRecordRepos():
             printWithVars2(f"{_red(repoString)}: failure! not able to get the status of {repoName} at {absRepoPath}", 'red')
             anyFailures = True
         newSyncDict[repoName] = newRepoInfo
-    
+
     if dryrun:
         sys.exit(0)
-    
+
     writeDictToSyncFile(syncFilePath, newSyncDict)
 
     if anyFailures:
@@ -666,7 +666,7 @@ def commandClone():
             anyFailures = True
             printWithVars2(f"{_red('failure!') }: no syncfile found at {absDestNamePath} or {syncRepoPath}")
             sys.exit(1)
-    
+
     cwd = absDestNamePath
     commandPopulate()
 
@@ -689,7 +689,7 @@ def commandPopulate():
         if not "cloneURL" in repoInfo:
             anyFailures = True
             printWithVars2(f"{repoString}: there is no cloneURL for this repo", "red")
-            continue   
+            continue
         cloneURL = repoInfo["cloneURL"]
         name = os.path.basename(absRepoPath)
         dir  = os.path.dirname(absRepoPath)
@@ -742,14 +742,14 @@ def commandStatus():
         modifiedCount = getModifiedCount(absRepoPath)
         stagedCount = getStagedCount(absRepoPath)
         branchName = getBranchName(absRepoPath)
-        
+
         # This is actually dimmed not grey since grey appears like black text for me
         def greyText(txt):
             return '\033[2m'+txt+"\033[00m"
 
         description = f"{greyText('branch')}: {colored(branchName,'blue')}".strip()
         description = description.strip()
-        
+
         if modifiedCount > 0:
             description = f"{description}, {greyText('modified')}: {modifiedCount}".strip()
         if stagedCount > 0:
@@ -843,7 +843,7 @@ def dispatchCommand():
 # --------------------------------------------------------------------------------------------------------------------------
 
 def getResolvedOptions(args):
-    
+
     bankOptions = flattenDict(dict(defaultOptions))
     if os.path.isfile('~/.bankconfigrc'):
         newOptions = flattenDict(getOptionDictFromIniFile('~/.bankconfigrc'))
@@ -853,7 +853,7 @@ def getResolvedOptions(args):
     if getattr(args, 'cwd', 'auto') != 'auto':
         configFile = os.path.abspath(os.path.join(args.cwd, 'bankconfig.ini'))
     else:
-        configFile = os.path.abspath('bankconfig.ini')    
+        configFile = os.path.abspath('bankconfig.ini')
     if os.path.isfile(configFile):
         newOptions = flattenDict(getOptionDictFromIniFile(configFile))
         bankOptions = mergeOptionDicts(bankOptions, newOptions)
@@ -874,9 +874,9 @@ def getResolvedOptions(args):
             'syncreponame' : getattr(args, 'syncreponame', 'auto')
         }
     }
-    
+
     bankOptions = mergeOptionDicts(bankOptions, flattenDict(passedInOptions))
-    
+
     # normalize non-string options
     bankOptions['general.verbosity'] = int(bankOptions['general.verbosity'])
     bankOptions['general.colorize'] = True if (bankOptions['general.colorize'].lower() in ['yes','true']) else False
@@ -902,7 +902,7 @@ def main():
     set_execute_defaults('verbosity', verbosity)
     set_execute_defaults('dryrun', dryrun)
     set_execute_defaults('colorize', colorize)
-    
+
     dispatchCommand()
 
 
