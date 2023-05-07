@@ -45,7 +45,7 @@ defaultOptions = {
     }
 }
 
-sync_commands = ['sync', 'recordRepos', 'createSyncfile', 'createSyncrepo', 'bisect', 'populate', 'git', 'gitall']
+sync_commands = ['sync', 'recordRepos', 'createSyncfile', 'createSyncrepo', 'bisect', 'clone', 'populate', 'git', 'gitall']
 approved_git_commands = ['reset', 'log', 'status', 'branch', 'checkout', 'commit', 'tag', 'diff', 'fetch',
                          'push', 'pull', 'prune', 'gc', 'fsck', 'ls-files', 'ls-remote', 'ls-tree']
                          
@@ -180,6 +180,17 @@ bankconfig.ini inside this repo.
 This would create the syncrepo as the above command, but the repo would be called syncreponame.
 ''')
 
+#  CMD: clone ----------
+
+cloneCmdHelp = 'clone the repos specified in the syncfile'
+cloneCmdDescription = cloneCmdHelp
+cloneCmdEpilog = wrapParagraphs('''Example usage:
+
+  bank clone https://github.com/myProject/syncrepo.git myProject
+
+This would create the folder myProject and clone the syncrepo into myProject, and then populate each of the constituent repositories specified in the syncfile.
+''')
+
 
 #  CMD: populate ----------
 
@@ -189,7 +200,7 @@ populateCmdEpilog = wrapParagraphs('''Example usage:
 
   bank populate --syncfile syncfile.wl
 
-This would perform a git clone for each of the repositories specified in the syncfile
+This would perform a git clone for each of the repositories specified in the syncfile.
 ''')
 
 
@@ -201,7 +212,7 @@ statusCmdEpilog = wrapParagraphs('''Example usage:
 
   bank status --syncfile syncfile.wl
 
-This would report the status of each of the repositories specified in the syncfile
+This would report the status of each of the repositories specified in the syncfile.
 ''')
 
 #  CMD: bisect ----------
@@ -290,6 +301,10 @@ def parseArguments():
     parser_createSyncrepoCmd.add_argument("repos", metavar="reponame", help='the repos to be included in the bank', nargs="+")
     parser_createSyncrepoCmd.add_argument("--syncfilename", metavar="NAME", help='specify the name and extension of the syncfile', default='auto')
     parser_createSyncrepoCmd.add_argument("--syncreponame", metavar="NAME", help='specify the name of the syncrepo', default='auto')
+
+    parser_cloneCmd = addSubparser('clone', [commonOpts_parser])
+    parser_cloneCmd.add_argument("url", metavar="URL", help='the URL of the sync repo')
+    parser_cloneCmd.add_argument("name", metavar="NAME", help='the optional name for the repo', default=None, nargs='?')
 
     parser_populateCmd = addSubparser('populate')
 
@@ -605,6 +620,47 @@ def commandBisect(command):
 
 
 # --------------------------------------------------------------------------------------------------------------------------
+# command "clone"
+# --------------------------------------------------------------------------------------------------------------------------
+
+def commandClone():
+    global syncFilePath, syncRepoPath, cwd
+    cloneURL = args.url
+    if not isValidGitUrl(cloneURL):
+        print(colored("failure! {cloneURL} appears not to be a URL that works with git clone.", 'red'))
+        sys.exit(1)
+    destName = args.name if (args.name is not None) else getRepoNameFromUrl(cloneURL)
+    absDestNamePath = getAbsRepoPath(destName, cwd)
+
+    execute3("mkdir -p {absDestNamePath}")
+    opts = {'captureStdOutStdErr':False, 'verbosity':verbosity, 'cwd': os.path.dirname(absDestNamePath)}
+    print(f"\r>> cloning {cloneURL}...", end='', flush=True)
+    res = gitCommand("git clone {cloneURL} {destName}", 3, **opts)
+    if res['code'] != 0:
+        anyFailures = True
+        printWithVars2(f"\r{colored(cloneURL, 'red')}: error cloning repo to {absDestNamePath}: {res['stderr']}")
+        sys.exit(1)
+
+    printWithVars2(f"\r{colored(cloneURL, 'green')}: cloned repo to {absDestNamePath}")
+
+    syncRepoPath = os.path.join(absDestNamePath, 'syncrepo')
+
+    # If we have just cloned a sync repo (the typical case) then move the contents into the sync repo directory
+    if getSyncFileInDir(absDestNamePath):
+        moveDirectory(absDestNamePath, syncRepoPath)
+
+    syncFilePath = getSyncFileInDir(syncRepoPath)
+    if not syncFilePath:
+            anyFailures = True
+            printWithVars2("\r{colored('failure!, 'red')}: no syncfile found at {absDestNamePath} or {syncRepoPath}")
+            sys.exit(1)
+    
+    cwd = absDestNamePath
+    commandPopulate()
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------
 # command "populate"
 # --------------------------------------------------------------------------------------------------------------------------
 
@@ -754,6 +810,8 @@ def distributeGitCommand(command, includeSyncRepo=False, *remainingArgs):
 def dispatchCommand(command):
     if command == "sync":
         commandSync()
+    if command == "clone":
+        commandClone()
     if command == "populate":
         commandPopulate()
     if command == "status":

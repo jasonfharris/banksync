@@ -4,8 +4,11 @@
 import os.path
 import string
 import sys
+import shutil
+import tempfile
 import time
 import re
+import glob
 import json
 from collections import OrderedDict
 from sysexecute import *
@@ -215,13 +218,70 @@ def getStagedCount(absRepoPath):
 # URL helpers
 # --------------------------------------------------------------------------------------------------------------------------
 
+def getUniqueDirName(baseDirName):
+    """Generate a unique directory name by appending an incremented number to the base name."""
+    i = 1
+    newDirName = baseDirName
+    while os.path.exists(newDirName):
+        newDirName = f"{baseDirName}_{i}"
+        i += 1
+    return newDirName
+
+
 def getRepoNameFromUrl(url):
     """Extract the repository name from a given URL."""
     urlParts = urlsplit(url)
     repoNameWithExt = os.path.basename(urlParts.path)
-    repoName, _ = os.path.splitext(repoNameWithExt)
-    return repoName
+    repoName, ext = os.path.splitext(repoNameWithExt)
 
+    # Remove sync_repo, syncRepo, or SyncRepo from the repo name
+    repoName = re.sub(r"(?:_?sync_repo|_?syncRepo|_?SyncRepo)$", "", repoName)
+
+    # Get the last component in the path with an ASCII char in it
+    pathParts = re.split(r'[/]+', repoName)
+    for item in reversed(pathParts):
+        if any(char.isascii() and char.isalnum() for char in item):
+            return item.strip('_')
+
+    return getUniqueDirName('WrapperProject')
+
+
+def isValidGitUrl(url):
+    """Check if the given 'url' has a valid Git URL format or is a local file path."""
+    gitUrlPattern = re.compile(
+        r"(?:(?:https?|git|ssh|rsync)://|(?:(?:(?:[^@]+@)?[^:/]+)[:]))"  # Protocol or user@host
+        r"(?:[^/]+/)+"  # At least one-level of subdirectories
+        r"[^/]+(?:\.git)?$"  # Repository name, with an optional .git extension
+    )
+
+    return gitUrlPattern.match(url) or os.path.exists(url)
+
+
+def moveDirectory(srcDir, destDir):
+    """Move a directory to a new location, using a temporary directory to avoid issues with moving into a subdirectory."""
+    if not os.path.exists(srcDir):
+        raise ValueError(f"Source directory {srcDir} does not exist")
+        
+    if os.path.exists(destDir):
+        raise ValueError(f"Destination directory {destDir} already exists")
+
+    # Create a temporary directory
+    with tempfile.TemporaryDirectory() as tempDir:
+        # Move the source directory to the temporary directory
+        tempSrcDir = os.path.join(tempDir, os.path.basename(srcDir))
+        shutil.move(srcDir, tempSrcDir)
+
+        # Move the temporary source directory to the destination directory
+        shutil.move(tempSrcDir, destDir)
+
+
+def getSyncFileInDir(srcDir):
+   pattern = os.path.join(srcDir, 'syncfile.*')
+   matching_files = glob.glob(pattern)
+
+   if matching_files:
+      return matching_files[0]
+   return None  # Or set a default value if necessary
 
 
 # --------------------------------------------------------------------------------------------------------------------------
