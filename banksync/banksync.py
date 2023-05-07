@@ -329,18 +329,18 @@ def parseArguments():
     if len(sys.argv)==2 and sys.argv[1] == '--version':
         printVersionAndExit()
 
-    args, remainingArgs = parser.parse_known_args()
+    args, remaining_args = parser.parse_known_args()
     command = args.command
 
     if (not command in commands) and (not command in allGitCommands):
         printWithVars1(f"unknown command: {command}", 'red')
         sys.exit(1)
 
-    remainingArgs = [correctlyQuoteArg(arg) for arg in remainingArgs]
+    remaining_args = [correctlyQuoteArg(arg) for arg in remaining_args]
     if args.version:
         printVersionAndExit()
     
-    return args, remainingArgs
+    return args, remaining_args
 
 
 
@@ -503,7 +503,8 @@ def commandRecordRepos():
 # command "create_syncfile"
 # --------------------------------------------------------------------------------------------------------------------------
 
-def commandCreateSyncfile(repoNames):
+def commandCreateSyncfile():
+    repoNames = _config['args.repos']
     checkForSyncRepoDir(syncRepoPath, existing = False)
     newSyncDict = OrderedDict()
     anyFailures = False
@@ -541,7 +542,7 @@ def commandCreateSyncfile(repoNames):
 # command "create_syncrepo"
 # --------------------------------------------------------------------------------------------------------------------------
 
-def commandCreateSyncrepo(repoNames):
+def commandCreateSyncrepo():
     global syncFilePath
     global syncRepoPath
     syncfilename = _config['create_syncrepo.syncfilename']
@@ -563,7 +564,7 @@ def commandCreateSyncrepo(repoNames):
         f.write(f"[general]\ncwd=..\nsyncFile={syncfilename}")
     execute2("git init", cwd=syncRepoPath)
 
-    commandCreateSyncfile(repoNames)
+    commandCreateSyncfile()
 
 
 
@@ -571,7 +572,9 @@ def commandCreateSyncrepo(repoNames):
 # command "bisect"
 # --------------------------------------------------------------------------------------------------------------------------
 
-def commandBisect(command):
+def commandBisect():
+    command = _config['args.bisectcmd']
+    remainingArgs = _config['remaining_args']
     checkForSyncRepo(syncFilePath)
     syncDict = loadSyncFileAsDict(syncFilePath)
     currentRev = getCurrentRevHash(syncRepoPath)
@@ -768,7 +771,12 @@ def commandStatus():
 # a git command
 # --------------------------------------------------------------------------------------------------------------------------
 
-def distributeGitCommand(command, includeSyncRepo=False, *remainingArgs):
+def distributeGitCommand():
+
+    command = _config['args.gitcmd']
+    includeSyncRepo = (_config['args.command'] == 'gitall')
+    remainingArgs = _config['remaining_args']
+
     if not command in approved_git_commands:
         printWithVars1(f"{_yellow('warning')}: the git command `{command}` might not make sense being applied non-interactively to each repo in the bank. Use at your own discretion.")
     if not command in allGitCommands:
@@ -808,7 +816,8 @@ def distributeGitCommand(command, includeSyncRepo=False, *remainingArgs):
 # dispatch command
 # --------------------------------------------------------------------------------------------------------------------------
 
-def dispatchCommand(command):
+def dispatchCommand():
+    command = _config['args.command']
     if command == "sync":
         commandSync()
     if command == "clone":
@@ -820,15 +829,15 @@ def dispatchCommand(command):
     if command == "record_repos":
         commandRecordRepos()
     if command == "create_syncfile":
-        commandCreateSyncfile(args.repos)
+        commandCreateSyncfile()
     if command == "create_syncrepo":
-        commandCreateSyncrepo(args.repos)
+        commandCreateSyncrepo()
     if command == "bisect":
-        commandBisect(args.bisectcmd)
+        commandBisect()
     if command == "git":
-        distributeGitCommand(args.gitcmd, False, *remainingArgs)
+        distributeGitCommand()
     if command == "gitall":
-        distributeGitCommand(args.gitcmd, True, *remainingArgs)
+        distributeGitCommand()
 
 
 
@@ -879,13 +888,12 @@ def getResolvedOptions(args):
 
 
 def main():
-    global args, remainingArgs, syncFilePath, syncRepoPath, cwd, verbosity, dryrun, _config
-    args, remainingArgs = parseArguments()
+    global args, syncFilePath, syncRepoPath, cwd, verbosity, dryrun, _config
+    args, remaining_args = parseArguments()
 
-    command = args.command
     _config = getResolvedOptions(args)
     _config['args'] = vars(args)
-    _config['remaining_args'] = remainingArgs
+    _config['remaining_args'] = remaining_args
     _config = flattenDict(_config)
 
     cwd = _config['general.cwd']
@@ -898,7 +906,7 @@ def main():
     set_execute_defaults('dryrun', dryrun)
     set_execute_defaults('colorize', colorize)
     
-    dispatchCommand(command)
+    dispatchCommand()
 
 
 if __name__ == '__main__':
