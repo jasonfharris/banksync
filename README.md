@@ -107,28 +107,28 @@ The syncfile specifies which repositories are part of the bank, and what state t
 Which yields:
 
 ```
-<|
-    "repoFish" -> <|
-        "path" -> "repoFish",
-        "sha" -> "a27368bec17373938b1dcf73638945b89b60a9d0",
-        "UnixTimeStamp" -> "1480517200",
-        "date" -> "30 Nov 2016 - 15:46:40",
-        "author" -> "Jason Harris",
-        "revisionNumber" -> "3",
-        "message" -> "committing salmon",
-        "cloneURL" -> "https://github.com/testbank/repoFish.git"
-    |>,
-    "repoBird" -> <|
-        "path" -> "repoBird",
-        "sha" -> "6bf9d646b2aa224b64fb86cbddb4d7ab0f2e37d3",
-        "UnixTimeStamp" -> "1480517200",
-        "date" -> "30 Nov 2016 - 15:46:40",
-        "author" -> "Jason Harris",
-        "revisionNumber" -> "3",
-        "message" -> "committing eagle",
-        "cloneURL" -> "https://github.com/testbank/repoBird.git"
-    |>
-|>
+{
+    "repoFish" : {
+        "path" : "repoFish",
+        "sha" : "a27368bec17373938b1dcf73638945b89b60a9d0",
+        "UnixTimeStamp" : "1480517200",
+        "date" : "30 Nov 2016 - 15:46:40",
+        "author" : "Jason Harris",
+        "revisionNumber" : "3",
+        "message" : "committing salmon",
+        "cloneURL" : "https://github.com/testbank/repoFish.git"
+    },
+    "repoBird" : {
+        "path" : "repoBird",
+        "sha" : "6bf9d646b2aa224b64fb86cbddb4d7ab0f2e37d3",
+        "UnixTimeStamp" : "1480517200",
+        "date" : "30 Nov 2016 - 15:46:40",
+        "author" : "Jason Harris",
+        "revisionNumber" : "3",
+        "message" : "committing eagle",
+        "cloneURL" : "https://github.com/testbank/repoBird.git"
+    }
+}
 ```
 
 The syncfile should lie inside a git repo (the syncrepo). Whenever we want to record a configuration of the repos we simply alter the syncfile by transcribing the current state of the repos into the syncfile using `bank record_repos` with the appropriate options. We then use `git commit` to record this new state / configuration in the syncrepo.
@@ -147,28 +147,28 @@ So now we can update the syncfile with the state of the current repos in the ban
 The contents of our syncfile will now be something like:
 
 ```
-<|
-    "repoFish" -> <|
-        "path" -> "repoFish",
-        "sha" -> "a27368bec17373938b1dcf73638945b89b60a9d0",
-        "UnixTimeStamp" -> "1480517200",
-        "date" -> "30 Nov 2016 - 15:46:40",
-        "author" -> "Jason Harris",
-        "revisionNumber" -> "3",
-        "message" -> "committing salmon",
-        "cloneURL" -> "https://github.com/testbank/repoFish.git"
-    |>,
-    "repoBird" -> <|
-        "path" -> "repoBird",
-        "sha" -> "c8fb05947c5161e484104d99f427ec082fb4e85b",
-        "UnixTimeStamp" -> "1480519159",
-        "date" -> "30 Nov 2016 - 16:19:19",
-        "author" -> "Jason Harris",
-        "revisionNumber" -> "4",
-        "message" -> "committing toucan",
-        "cloneURL" -> "https://github.com/testbank/repoBird.git"
-    |>
-|>
+{
+    "repoFish" : {
+        "path" : "repoFish",
+        "sha" : "a27368bec17373938b1dcf73638945b89b60a9d0",
+        "UnixTimeStamp" : "1480517200",
+        "date" : "30 Nov 2016 - 15:46:40",
+        "author" : "Jason Harris",
+        "revisionNumber" : "3",
+        "message" : "committing salmon",
+        "cloneURL" : "https://github.com/testbank/repoFish.git"
+    },
+    "repoBird" : {
+        "path" : "repoBird",
+        "sha" : "c8fb05947c5161e484104d99f427ec082fb4e85b",
+        "UnixTimeStamp" : "1480519159",
+        "date" : "30 Nov 2016 - 16:19:19",
+        "author" : "Jason Harris",
+        "revisionNumber" : "4",
+        "message" : "committing toucan",
+        "cloneURL" : "https://github.com/testbank/repoBird.git"
+    }
+}
 ```
 
 (Note the sha, timestamps, and other data about the state of the repo `repoBird` has changed.)
