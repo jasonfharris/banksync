@@ -36,13 +36,13 @@ defaultOptions = {
     'sync' : {
         'matching' : 'closetimestamp'
     },
-    'createSyncrepo' : {
+    'create_syncrepo' : {
         'syncfilename' : 'syncfile.json',
         'syncreponame' : 'syncrepo'
     }
 }
 
-sync_commands = ['sync', 'recordRepos', 'createSyncfile', 'createSyncrepo', 'bisect', 'clone', 'populate', 'git', 'gitall']
+sync_commands = ['sync', 'record_repos', 'create_syncfile', 'create_syncrepo', 'bisect', 'clone', 'populate', 'git', 'gitall']
 approved_git_commands = ['reset', 'log', 'status', 'branch', 'checkout', 'commit', 'tag', 'diff', 'fetch',
                          'push', 'pull', 'prune', 'gc', 'fsck', 'ls-files', 'ls-remote', 'ls-tree']
                          
@@ -135,44 +135,44 @@ on each repo in the bank.
 ''')
 
 
-#  CMD: recordRepos ----------
+#  CMD: record_repos ----------
 
-recordReposCmdHelp = 'alter the contents of the syncfile so that it matches the current revisions of the referenced repositories.'
-recordReposCmdDescription = recordReposCmdHelp
-recordReposCmdEpilog = wrapParagraphs('''Example usage:
+record_reposCmdHelp = 'alter the contents of the syncfile so that it matches the current revisions of the referenced repositories.'
+record_reposCmdDescription = record_reposCmdHelp
+record_reposCmdEpilog = wrapParagraphs('''Example usage:
 
-  bank recordRepos --syncfile syncfile.wl
+  bank record_repos --syncfile syncfile.wl
 
 This would alter the contents of syncfile.wl so that it matches the current revisions of the referenced repositories.
 ''')
 
 
-#  CMD: createSyncfile ----------
+#  CMD: create_syncfile ----------
 
-createSyncfileCmdHelp = 'create or overwrite the syncfile to contain the current sync states for the passed in repos.'
-createSyncfileCmdDescription = createSyncfileCmdHelp
-createSyncfileCmdEpilog = wrapParagraphs('''Example usage:
+create_syncfileCmdHelp = 'create or overwrite the syncfile to contain the current sync states for the passed in repos.'
+create_syncfileCmdDescription = create_syncfileCmdHelp
+create_syncfileCmdEpilog = wrapParagraphs('''Example usage:
 
-  bank createSyncfile --syncfile syncfile.wl --cwd .. repo1 repo2 ... repoN
+  bank create_syncfile --syncfile syncfile.wl --cwd .. repo1 repo2 ... repoN
 
 This would create or overwrite the syncfile.wl to record the current states of repo1 repo2 ... repoN which are located
 one directory level up.
 ''')
 
 
-#  CMD: createSyncrepo ----------
+#  CMD: create_syncrepo ----------
 
-createSyncrepoCmdHelp = 'create or overwrite the syncrepo to contain the current sync states for the passed in repos.'
-createSyncrepoCmdDescription = createSyncrepoCmdHelp
-createSyncrepoCmdEpilog = wrapParagraphs('''Example usage:
+create_syncrepoCmdHelp = 'create or overwrite the syncrepo to contain the current sync states for the passed in repos.'
+create_syncrepoCmdDescription = create_syncrepoCmdHelp
+create_syncrepoCmdEpilog = wrapParagraphs('''Example usage:
 
-  bank createSyncrepo repo1 repo2 ... repoN
+  bank create_syncrepo repo1 repo2 ... repoN
 
 This would create and initilize a git repository called syncrepo and inside there it would create the syncfile.json
 to record the current states of the repo1 repo2 ... repoN which are located at this level. It would also create the
 bankconfig.ini inside this repo.
 
-  bank createSyncrepo --syncrepo <syncreponame> repo1 repo2 ... repoN --cwd some/dir
+  bank create_syncrepo --syncrepo <syncreponame> repo1 repo2 ... repoN --cwd some/dir
 
 This would create the syncrepo as the above command, but the repo would be called syncreponame.
 ''')
@@ -289,15 +289,15 @@ def parseArguments():
     parser_syncCmd = addSubparser('sync')
     parser_syncCmd.add_argument("--matching", metavar="MATCH", help=f'specify how we can recognize a revision "match": {matchingOptionValues}', choices=matchingOptionValues, default='auto')
 
-    parser_recordReposCmd = addSubparser('recordRepos')
+    parser_record_reposCmd = addSubparser('record_repos')
 
-    parser_createSyncfileCmd = addSubparser('createSyncfile')
-    parser_createSyncfileCmd.add_argument("repos", metavar="reponame", help='the repos to be included in the bank', nargs="+")
+    parser_create_syncfileCmd = addSubparser('create_syncfile')
+    parser_create_syncfileCmd.add_argument("repos", metavar="reponame", help='the repos to be included in the bank', nargs="+")
 
-    parser_createSyncrepoCmd = addSubparser('createSyncrepo', [commonOpts_parser])
-    parser_createSyncrepoCmd.add_argument("repos", metavar="reponame", help='the repos to be included in the bank', nargs="+")
-    parser_createSyncrepoCmd.add_argument("--syncfilename", metavar="NAME", help='specify the name and extension of the syncfile', default='auto')
-    parser_createSyncrepoCmd.add_argument("--syncreponame", metavar="NAME", help='specify the name of the syncrepo', default='auto')
+    parser_create_syncrepoCmd = addSubparser('create_syncrepo', [commonOpts_parser])
+    parser_create_syncrepoCmd.add_argument("repos", metavar="reponame", help='the repos to be included in the bank', nargs="+")
+    parser_create_syncrepoCmd.add_argument("--syncfilename", metavar="NAME", help='specify the name and extension of the syncfile', default='auto')
+    parser_create_syncrepoCmd.add_argument("--syncreponame", metavar="NAME", help='specify the name of the syncrepo', default='auto')
 
     parser_cloneCmd = addSubparser('clone', [commonOpts_parser])
     parser_cloneCmd.add_argument("url", metavar="URL", help='the URL of the sync repo')
@@ -461,7 +461,7 @@ def commandSync():
 
 
 # --------------------------------------------------------------------------------------------------------------------------
-# command "recordRepos"
+# command "record_repos"
 # --------------------------------------------------------------------------------------------------------------------------
 
 def commandRecordRepos():
@@ -500,7 +500,7 @@ def commandRecordRepos():
 
 
 # --------------------------------------------------------------------------------------------------------------------------
-# command "createSyncfile"
+# command "create_syncfile"
 # --------------------------------------------------------------------------------------------------------------------------
 
 def commandCreateSyncfile(repoNames):
@@ -538,14 +538,14 @@ def commandCreateSyncfile(repoNames):
 
 
 # --------------------------------------------------------------------------------------------------------------------------
-# command "createSyncrepo"
+# command "create_syncrepo"
 # --------------------------------------------------------------------------------------------------------------------------
 
 def commandCreateSyncrepo(repoNames):
     global syncFilePath
     global syncRepoPath
-    syncfilename = resolvedOpts['createsyncrepo.syncfilename']
-    syncreponame = resolvedOpts['createsyncrepo.syncreponame']
+    syncfilename = resolvedOpts['create_syncrepo.syncfilename']
+    syncreponame = resolvedOpts['create_syncrepo.syncreponame']
     syncRepoPath = os.path.abspath(syncreponame)
     syncFilePath = os.path.join(syncRepoPath, syncfilename)
     configFilePath = os.path.join(syncRepoPath, 'bankconfig.ini')
@@ -816,11 +816,11 @@ def dispatchCommand(command):
         commandPopulate()
     if command == "status":
         commandStatus()
-    if command == "recordRepos":
+    if command == "record_repos":
         commandRecordRepos()
-    if command == "createSyncfile":
+    if command == "create_syncfile":
         commandCreateSyncfile(args.repos)
-    if command == "createSyncrepo":
+    if command == "create_syncrepo":
         commandCreateSyncrepo(args.repos)
     if command == "bisect":
         commandBisect(args.bisectcmd)
@@ -862,7 +862,7 @@ def getResolvedOptions(args):
         'sync' : {
             'matching' : getattr(args, 'matching', 'auto')
         },
-        'createsyncrepo' : {
+        'create_syncrepo' : {
             'syncfilename' : getattr(args, 'syncfilename', 'auto'),
             'syncreponame' : getattr(args, 'syncreponame', 'auto')
         }

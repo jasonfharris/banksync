@@ -131,7 +131,7 @@ Which yields:
 |>
 ```
 
-The syncfile should lie inside a git repo (the syncrepo). Whenever we want to record a configuration of the repos we simply alter the syncfile by transcribing the current state of the repos into the syncfile using `bank recordRepos` with the appropriate options. We then use `git commit` to record this new state / configuration in the syncrepo.
+The syncfile should lie inside a git repo (the syncrepo). Whenever we want to record a configuration of the repos we simply alter the syncfile by transcribing the current state of the repos into the syncfile using `bank record_repos` with the appropriate options. We then use `git commit` to record this new state / configuration in the syncrepo.
 
 So let us add some content to repoBird in our example and then commit this change.
 
@@ -142,7 +142,7 @@ So let us add some content to repoBird in our example and then commit this chang
 So now we can update the syncfile with the state of the current repos in the bank:
 
     cd ~/animals/animalsRepoSync/
-    bank recordRepos
+    bank record_repos
 
 The contents of our syncfile will now be something like:
 
@@ -231,7 +231,7 @@ Then you could omit the options to the bank command and they would be taken from
 
 ```
 cd animals/animalsSyncRepo
-bank recordRepos
+bank record_repos
 git commit -am "recording the latest state of the repos in animals."
 ```
 
@@ -239,7 +239,7 @@ You can choose weather to include the `bankconfig.ini` in the syncrepo history o
 
 ## Commands
 
-The form of a bank command is `bank <cmd> <opts>` where `<cmd>` is one of `sync`, `recordRepos`, `createSyncfile`, `bisect`, `populate`,  `git` or `gitall` 
+The form of a bank command is `bank <cmd> <opts>` where `<cmd>` is one of `sync`, `record_repos`, `create_syncfile`, `bisect`, `populate`,  `git` or `gitall` 
 
 #### bank sync <opts>
 
@@ -258,38 +258,38 @@ bank sync --syncfile syncfile.wl --cwd ../other/dir
 This would checkout / update the repos given in the syncfile to the states given in the syncfile
 (but the path to each repo in the bank will be prefixed by the value of the `--cwd` option `../other/dir`).
 
-#### bank recordRepos <opts>
+#### bank record_repos <opts>
 
-`recordRepos` is used to transcribe the current state of the repos into the syncfile. Eg:
+`record_repos` is used to transcribe the current state of the repos into the syncfile. Eg:
 
 ```
-bank recordRepos --syncfile syncfile.wl
+bank record_repos --syncfile syncfile.wl
 ```
 
 This would alter the contents of the syncfile and change the revisions stored in the syncfile.wl to match the current revisions of the referenced repositories.
 
-#### bank createSyncfile <opts>
+#### bank create_syncfile <opts>
 
-`createSyncfile` is used to generate an initial syncfile. Eg:
+`create_syncfile` is used to generate an initial syncfile. Eg:
 
 ```
-bank createSyncfile --syncfile syncfile.wl repo1 repo2 ... repoN --cwd some/dir
+bank create_syncfile --syncfile syncfile.wl repo1 repo2 ... repoN --cwd some/dir
 ```
 
 This would generate or overwrite the syncfile.wl to contain sync points for the current states of `repo1`, `repo2`, ... `repoN`
 
-#### bank createSyncrepo <opts>
+#### bank create_syncrepo <opts>
 
-`createSyncrepo` is used to generate the syncrepo directory, initialize a git repository there, create the syncfile and also create the bankconfig.ini file. Basically it creates all the working parts of a syncrepo. Eg:
+`create_syncrepo` is used to generate the syncrepo directory, initialize a git repository there, create the syncfile and also create the bankconfig.ini file. Basically it creates all the working parts of a syncrepo. Eg:
 
 ```
-bank createSyncrepo repo1 repo2 ... repoN
+bank create_syncrepo repo1 repo2 ... repoN
 ```
 
 This would create the directory `syncrepo` and fill it with a `syncfile.json` and a `bankconfig.ini`. The syncfile would contain the latest states of the `repo1`, `repo2`, ... `repoN`. 
 
 ```
-bank createSyncrepo --syncreponame controlrepo --syncfilename felipe.json repo1 repo2 ... repoN
+bank create_syncrepo --syncreponame controlrepo --syncfilename felipe.json repo1 repo2 ... repoN
 ```
 Would create and initialize a syncrepo called `controlrepo` and inside that a syncfile called `felipe.json`.
 

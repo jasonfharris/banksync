@@ -44,7 +44,7 @@
 >>> ans = execute4('git commit -am "committing sparrow"', cwd='repoBird')
 >>> sparrowHash = currentHash('repoBird')
 
->>> ans = execute4('../bank_local createSyncfile repoFish repoBird', cwd='repoSyncFile')
+>>> ans = execute4('../bank_local create_syncfile repoFish repoBird', cwd='repoSyncFile')
 >>> ans = execute4('git add syncfile.wl bankconfig.ini', cwd='repoSyncFile')
 >>> ans = execute4('git commit -am "syncPoint1"', cwd='repoSyncFile')
 >>> syncPoint1 = currentHash('repoSyncFile')
@@ -62,7 +62,7 @@
 >>> ans = execute4('git commit -am "committing hawk"', cwd='repoBird')
 >>> hawkHash = currentHash('repoBird')
 
->>> ans = execute4('../bank_local recordRepos', cwd='repoSyncFile')
+>>> ans = execute4('../bank_local record_repos', cwd='repoSyncFile')
 >>> ans = execute4('git add syncfile.wl bankconfig.ini', cwd='repoSyncFile')
 >>> ans = execute4('git commit -am "syncPoint2"', cwd='repoSyncFile')
 >>> syncPoint2 = currentHash('repoSyncFile')
@@ -80,7 +80,7 @@
 >>> ans = execute4('git commit -am "committing eagle"', cwd='repoBird')
 >>> eagleHash = currentHash('repoBird')
 
->>> ans = execute4('../bank_local recordRepos', cwd='repoSyncFile')
+>>> ans = execute4('../bank_local record_repos', cwd='repoSyncFile')
 >>> ans = execute4('git add syncfile.wl bankconfig.ini', cwd='repoSyncFile')
 >>> ans = execute4('git commit -am "syncPoint3"', cwd='repoSyncFile')
 >>> syncPoint3 = currentHash('repoSyncFile')
@@ -113,19 +113,19 @@ True
 True
 
 
-# Test createSyncrepo
+# Test create_syncrepo
 
 >>> ans = execute4('rm -rf zoosyncrepo')
 
 >>> ans = execute4('git checkout {syncPoint1}', cwd='repoSyncFile')
 >>> ans = execute4('../bank_local sync', cwd='repoSyncFile')
->>> ans = execute4('./bank_local createSyncrepo --syncreponame zoosyncrepo --syncfilename joekeeper.wl repoFish repoBird')
+>>> ans = execute4('./bank_local create_syncrepo --syncreponame zoosyncrepo --syncfilename joekeeper.wl repoFish repoBird')
 >>> ans = execute4('git add joekeeper.wl', cwd='zoosyncrepo')
 >>> ans = execute4('git commit -am "inital"', cwd='zoosyncrepo')
 >>> zooInitial = currentHash('zoosyncrepo')
 
 >>> ans = execute4('../bank_local git checkout master', cwd='zoosyncrepo')
->>> ans = execute4('../bank_local recordRepos', cwd='zoosyncrepo')
+>>> ans = execute4('../bank_local record_repos', cwd='zoosyncrepo')
 >>> ans = execute4('git commit -am "final"', cwd='zoosyncrepo')
 >>> zooFinal = currentHash('zoosyncrepo')
 
