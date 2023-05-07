@@ -6,9 +6,8 @@
 
 You can install `banksync` from PyPi with a simple:
 
-```
-pip install banksync
-```
+
+    pip install banksync
 
 ## Quick Start
 
@@ -22,13 +21,14 @@ To quickly clone and populate the example collection of repos, use the following
 This will git clone the thin syncrepo, which contains the syncfile, and then populate all constituent repos. The resulting structure will be:
 
     animals
-    ├── animalsRepoSync
-    │   ├── bankconfig.ini
-    │   └── syncfile.wl
     ├── repoBird
     │   └── Bird.txt
-    └── repoFish
-        └── Fish.txt
+    ├── repoFish
+    │   └── Fish.txt
+    └── syncrepo
+        ├── bankconfig.ini
+        └── syncfile.json
+
 
 Let's walk quickly through what is happening
 
@@ -57,7 +57,7 @@ Let's break down the quick start process into steps.
    animals
    └── animalsRepoSync
        ├── bankconfig.ini
-       └── syncfile.wl
+       └── syncfile.json
    ```
 
 3. Populate the repositories in the bank:
@@ -73,7 +73,7 @@ Let's break down the quick start process into steps.
    animals
    ├── animalsRepoSync
    │   ├── bankconfig.ini
-   │   └── syncfile.wl
+   │   └── syncfile.json
    ├── repoBird
    │   └── Bird.txt
    └── repoFish
@@ -102,7 +102,7 @@ Which will do a `git checkout master` on all the repos in the bank including the
 
 The syncfile specifies which repositories are part of the bank, and what state the repositories should be synchronized to. A typical simple sync file might be the following
 
-    more ~/animals/animalsRepoSync/syncfile.wl
+    more ~/animals/animalsRepoSync/syncfile.json
 
 Which yields:
 
@@ -179,11 +179,11 @@ So we could now record this new overall state of the repos in the bank via simpl
 
 ## Locations
 
-How does the bank command know where to put the `repoBird` and `repoFish`? How does it know which syncfile to use, etc. Well in the syncrepo there is the file `bankconfig.ini`. This is a standard preferences file but in this example it has two important options: `cwd=..` and `syncfile=syncfile.wl`.
+How does the bank command know where to put the `repoBird` and `repoFish`? How does it know which syncfile to use, etc. Well in the syncrepo there is the file `bankconfig.ini`. This is a standard preferences file but in this example it has two important options: `cwd=..` and `syncfile=syncfile.json`.
 
 The cwd (ChangeWorkingDirectory) option specifies that the repo commands should be executed one level up from our current working directory. So since we are currently at `~/animals/animalsRepoSync` that means that the repos paths will start from `~/animals/`
 
-The second option just tells us what the name of the syncfile is. We could have called it `earthanimals.wl` if we wanted to.
+The second option just tells us what the name of the syncfile is. We could have called it `earthanimals.json` if we wanted to.
 
 ## Bank command line options
 
@@ -221,19 +221,15 @@ When attempting to sync the constituent repos to the versions specified in the s
 
 Instead of specifying the `--syncfile` and`—cwd` in each command you can create a `bankconfig.ini` file alongside the syncfile. In the `bankconfig.ini` file you can specify the default syncfile and cwd to use if none is specified. Eg we could add the file `animals/animalsSyncRepo/bankconfig.ini` with the following contents:
 
-```
-[general]
-cwd=..
-syncFile=syncfile.wl
-```
+    [general]
+    cwd=..
+    syncFile=syncfile.json
 
 Then you could omit the options to the bank command and they would be taken from the bankconfig.ini file so the above example would become:
 
-```
-cd animals/animalsSyncRepo
-bank record_repos
-git commit -am "recording the latest state of the repos in animals."
-```
+    cd animals/animalsSyncRepo
+    bank record_repos
+    git commit -am "recording the latest state of the repos in animals."
 
 You can choose weather to include the `bankconfig.ini` in the syncrepo history or not. (We choose to in this example but other teams may leave this to the individual developers.)
 
@@ -245,15 +241,11 @@ The form of a bank command is `bank <cmd> <opts>` where `<cmd>` is one of `sync`
 
 `sync` will update / checkout the revisions specified in the syncfile for each of the repos specified in the bank.
 
-```
-bank sync --syncfile syncfile.wl
-```
+    bank sync --syncfile syncfile.json
 
-This would checkout / update the repos given in the syncfile `syncfile.wl` to the states given in the syncfile. It each repo it tries to checkout the version first by the given sha, and then it falls back to the given timestamp, and then it falls back to the closest timestamp. (This fallback behavior can be controlled by the `--matching` option.)
+This would checkout / update the repos given in the syncfile `syncfile.json` to the states given in the syncfile. It each repo it tries to checkout the version first by the given sha, and then it falls back to the given timestamp, and then it falls back to the closest timestamp. (This fallback behavior can be controlled by the `--matching` option.)
 
-```
-bank sync --syncfile syncfile.wl --cwd ../other/dir
-```
+    bank sync --syncfile syncfile.json --cwd ../other/dir
 
 This would checkout / update the repos given in the syncfile to the states given in the syncfile
 (but the path to each repo in the bank will be prefixed by the value of the `--cwd` option `../other/dir`).
@@ -262,35 +254,28 @@ This would checkout / update the repos given in the syncfile to the states given
 
 `record_repos` is used to transcribe the current state of the repos into the syncfile. Eg:
 
-```
-bank record_repos --syncfile syncfile.wl
-```
+    bank record_repos --syncfile syncfile.json
 
-This would alter the contents of the syncfile and change the revisions stored in the syncfile.wl to match the current revisions of the referenced repositories.
+This would alter the contents of the syncfile and change the revisions stored in the syncfile.json to match the current revisions of the referenced repositories.
 
 #### bank create_syncfile <opts>
 
 `create_syncfile` is used to generate an initial syncfile. Eg:
 
-```
-bank create_syncfile --syncfile syncfile.wl repo1 repo2 ... repoN --cwd some/dir
-```
+    bank create_syncfile --syncfile syncfile.json repo1 repo2 ... repoN --cwd some/dir
 
-This would generate or overwrite the syncfile.wl to contain sync points for the current states of `repo1`, `repo2`, ... `repoN`
+This would generate or overwrite the syncfile.json to contain sync points for the current states of `repo1`, `repo2`, ... `repoN`
 
 #### bank create_syncrepo <opts>
 
 `create_syncrepo` is used to generate the syncrepo directory, initialize a git repository there, create the syncfile and also create the bankconfig.ini file. Basically it creates all the working parts of a syncrepo. Eg:
 
-```
-bank create_syncrepo repo1 repo2 ... repoN
-```
+    bank create_syncrepo repo1 repo2 ... repoN
 
 This would create the directory `syncrepo` and fill it with a `syncfile.json` and a `bankconfig.ini`. The syncfile would contain the latest states of the `repo1`, `repo2`, ... `repoN`. 
 
-```
-bank create_syncrepo --syncreponame controlrepo --syncfilename felipe.json repo1 repo2 ... repoN
-```
+    bank create_syncrepo --syncreponame controlrepo --syncfilename felipe.json repo1 repo2 ... repoN
+
 Would create and initialize a syncrepo called `controlrepo` and inside that a syncfile called `felipe.json`.
 
 #### bank bisect <opts>
@@ -313,13 +298,13 @@ Basically we are git bisecting on the syncrepo, and after each bisect step we ge
 
 We can use `bank` to perform a git command on each repository in the bank. All git commands have the prefix 'git' along with the normal name of the git command. Eg
 
-    bank git status --syncfile syncfile.wl
+    bank git status --syncfile syncfile.json
 
 Will perform a `git status` operation on each of the repositories in the bank and print the results to stdout.
 
 If you use `gitall` instead of `git` command, then the git command will also be run in the syncrepo.
 
-    bank gitall status --syncfile syncfile.wl
+    bank gitall status --syncfile syncfile.json
 
 Will perform a `git status` operation on each of the repositories in the bank and print the results to stdout.
 
@@ -327,7 +312,6 @@ Will perform a `git status` operation on each of the repositories in the bank an
 
 To run the test suite you need `py.test` installed on your machine. Then after downloading the source code you can simply execute:
 
-```
-cd banksync_Package
-py.test
-```
+    cd banksync_Package
+    py.test
+

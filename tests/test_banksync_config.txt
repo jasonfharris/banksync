@@ -28,7 +28,7 @@
 
 >>> ans = execute4('mkdir repoSyncFile')
 >>> ans = execute4('git init', cwd='repoSyncFile')
->>> ans = execute4('echo "[general]\ncwd=..\nsyncFile=syncfile.wl" > repoSyncFile/bankconfig.ini')
+>>> ans = execute4('echo "[general]\ncwd=..\nsyncFile=syncfile.json" > repoSyncFile/bankconfig.ini')
 >>> ans = execute4('git remote add origin https://github.com/testbank/animalsRepoSync.git', cwd='repoSyncFile')
 
 
@@ -45,7 +45,7 @@
 >>> sparrowHash = currentHash('repoBird')
 
 >>> ans = execute4('../bank_local create_syncfile repoFish repoBird', cwd='repoSyncFile')
->>> ans = execute4('git add syncfile.wl bankconfig.ini', cwd='repoSyncFile')
+>>> ans = execute4('git add syncfile.json bankconfig.ini', cwd='repoSyncFile')
 >>> ans = execute4('git commit -am "syncPoint1"', cwd='repoSyncFile')
 >>> syncPoint1 = currentHash('repoSyncFile')
 >>> time.sleep(4)
@@ -63,7 +63,7 @@
 >>> hawkHash = currentHash('repoBird')
 
 >>> ans = execute4('../bank_local record_repos', cwd='repoSyncFile')
->>> ans = execute4('git add syncfile.wl bankconfig.ini', cwd='repoSyncFile')
+>>> ans = execute4('git add syncfile.json bankconfig.ini', cwd='repoSyncFile')
 >>> ans = execute4('git commit -am "syncPoint2"', cwd='repoSyncFile')
 >>> syncPoint2 = currentHash('repoSyncFile')
 >>> time.sleep(4)
@@ -81,7 +81,7 @@
 >>> eagleHash = currentHash('repoBird')
 
 >>> ans = execute4('../bank_local record_repos', cwd='repoSyncFile')
->>> ans = execute4('git add syncfile.wl bankconfig.ini', cwd='repoSyncFile')
+>>> ans = execute4('git add syncfile.json bankconfig.ini', cwd='repoSyncFile')
 >>> ans = execute4('git commit -am "syncPoint3"', cwd='repoSyncFile')
 >>> syncPoint3 = currentHash('repoSyncFile')
 
@@ -119,8 +119,8 @@ True
 
 >>> ans = execute4('git checkout {syncPoint1}', cwd='repoSyncFile')
 >>> ans = execute4('../bank_local sync', cwd='repoSyncFile')
->>> ans = execute4('./bank_local create_syncrepo --syncreponame zoosyncrepo --syncfilename joekeeper.wl repoFish repoBird')
->>> ans = execute4('git add joekeeper.wl', cwd='zoosyncrepo')
+>>> ans = execute4('./bank_local create_syncrepo --syncreponame zoosyncrepo --syncfilename joekeeper.json repoFish repoBird')
+>>> ans = execute4('git add joekeeper.json', cwd='zoosyncrepo')
 >>> ans = execute4('git commit -am "inital"', cwd='zoosyncrepo')
 >>> zooInitial = currentHash('zoosyncrepo')
 
@@ -175,11 +175,11 @@ update client repos to master, and sync repo to syncPoint1
 >>> ans = execute4('../bank_local sync', cwd='repoSyncFile')
 >>> ans = execute4('git checkout {syncPoint1}', cwd='repoSyncFile')
 
-remove hashes from syncfile.wl
->>> dict = loadSyncFileAsDict('repoSyncFile/syncfile.wl')
+remove hashes from syncfile.json
+>>> dict = loadSyncFileAsDict('repoSyncFile/syncfile.json')
 >>> del dict['repoFish']['sha']
 >>> del dict['repoBird']['sha']
->>> writeDictToSyncFile('repoSyncFile/syncfile.wl', dict)
+>>> writeDictToSyncFile('repoSyncFile/syncfile.json', dict)
 
 verify that sync now correctly updates to the timestamps
 >>> ans = execute4('../bank_local sync', cwd='repoSyncFile')
@@ -192,13 +192,13 @@ checkout syncPoint2
 >>> ans = execute4('git reset --hard', cwd='repoSyncFile')
 >>> ans = execute4('git checkout {syncPoint2}', cwd='repoSyncFile')
 
-remove hashes from syncfile.wl and alter the UnixTimeStamps
->>> dict = loadSyncFileAsDict('repoSyncFile/syncfile.wl')
+remove hashes from syncfile.json and alter the UnixTimeStamps
+>>> dict = loadSyncFileAsDict('repoSyncFile/syncfile.json')
 >>> del dict['repoFish']['sha']
 >>> del dict['repoBird']['sha']
 >>> dict['repoFish']['UnixTimeStamp'] = str(int(dict['repoFish']['UnixTimeStamp'])+1)
 >>> dict['repoBird']['UnixTimeStamp'] = str(int(dict['repoBird']['UnixTimeStamp'])+1)
->>> writeDictToSyncFile('repoSyncFile/syncfile.wl', dict)
+>>> writeDictToSyncFile('repoSyncFile/syncfile.json', dict)
 
 confirm that we get no update unless if we allow only exact timestamps
 >>> ans = execute4('../bank_local sync --matching timestamp', ignoreErrors=True, cwd='repoSyncFile')

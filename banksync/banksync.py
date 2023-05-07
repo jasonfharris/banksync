@@ -118,15 +118,15 @@ syncCmdHelp = 'checkout / update the repos given in the syncfile to the states g
 syncCmdDescription = syncCmdHelp
 syncCmdEpilog = wrapParagraphs('''Example usage:
 
-  bank sync --syncfile syncfile.wl
+  bank sync --syncfile syncfile.json
 
-This would checkout / update the repos given in the syncfile.wl to the states given
-in the syncfile.wl.
+This would checkout / update the repos given in the syncfile.json to the states given
+in the syncfile.json.
 
-  bank sync --syncfile syncfile.wl --cwd ../other/dir
+  bank sync --syncfile syncfile.json --cwd ../other/dir
 
-This would checkout / update the repos given in the syncfile.wl to the states given
-in the syncfile.wl (but the path to the repos are prefixed by the value of cwd).
+This would checkout / update the repos given in the syncfile.json to the states given
+in the syncfile.json (but the path to the repos are prefixed by the value of cwd).
 
   bank sync
 
@@ -141,9 +141,9 @@ record_reposCmdHelp = 'alter the contents of the syncfile so that it matches the
 record_reposCmdDescription = record_reposCmdHelp
 record_reposCmdEpilog = wrapParagraphs('''Example usage:
 
-  bank record_repos --syncfile syncfile.wl
+  bank record_repos --syncfile syncfile.json
 
-This would alter the contents of syncfile.wl so that it matches the current revisions of the referenced repositories.
+This would alter the contents of syncfile.json so that it matches the current revisions of the referenced repositories.
 ''')
 
 
@@ -153,9 +153,9 @@ create_syncfileCmdHelp = 'create or overwrite the syncfile to contain the curren
 create_syncfileCmdDescription = create_syncfileCmdHelp
 create_syncfileCmdEpilog = wrapParagraphs('''Example usage:
 
-  bank create_syncfile --syncfile syncfile.wl --cwd .. repo1 repo2 ... repoN
+  bank create_syncfile --syncfile syncfile.json --cwd .. repo1 repo2 ... repoN
 
-This would create or overwrite the syncfile.wl to record the current states of repo1 repo2 ... repoN which are located
+This would create or overwrite the syncfile.json to record the current states of repo1 repo2 ... repoN which are located
 one directory level up.
 ''')
 
@@ -195,7 +195,7 @@ populateCmdHelp = 'populate the repos specified in the syncfile'
 populateCmdDescription = populateCmdHelp
 populateCmdEpilog = wrapParagraphs('''Example usage:
 
-  bank populate --syncfile syncfile.wl
+  bank populate --syncfile syncfile.json
 
 This would perform a git clone for each of the repositories specified in the syncfile.
 ''')
@@ -207,7 +207,7 @@ statusCmdHelp = 'reports the status of the repos specified in the syncfile'
 statusCmdDescription = statusCmdHelp
 statusCmdEpilog = wrapParagraphs('''Example usage:
 
-  bank status --syncfile syncfile.wl
+  bank status --syncfile syncfile.json
 
 This would report the status of each of the repositories specified in the syncfile.
 ''')
@@ -218,7 +218,7 @@ bisectCmdHelp = 'bisect the syncrepo and sync all repos in the bank to the new s
 bisectCmdDescription = bisectCmdHelp
 bisectCmdEpilog = wrapParagraphs('''Example usage:
 
-  bank bisect --syncfile syncfile.wl reset
+  bank bisect --syncfile syncfile.json reset
 
 This would pass the reset to the bisection of the sync-repo.
 ''')
@@ -230,9 +230,9 @@ gitCmdHelp = 'perform the given git command in each repo in the bank'
 gitCmdDescription = gitCmdHelp
 gitCmdEpilog = wrapParagraphs('''Example usage:
 
-  bank git status --syncfile syncfile.wl 
+  bank git status --syncfile syncfile.json 
 
-Perform git status and list the results on each of the repositories specified in the syncfile.wl
+Perform git status and list the results on each of the repositories specified in the syncfile.json
 
   bank git tag release_1.7.0.1
 
@@ -255,9 +255,9 @@ line only works for the common commands.
 
 Example usage:
 
-  bank gitall status --syncfile syncfile.wl 
+  bank gitall status --syncfile syncfile.json 
 
-Perform git status and list the results on each of the repositories specified in the syncfile.wl
+Perform git status and list the results on each of the repositories specified in the syncfile.json
 and in addition to the actual repo containing the sync file (the syncrepo)
 
   bank gitall tag release_1.7.0.1
@@ -885,7 +885,7 @@ def getResolvedOptions(args):
 
 
 def main():
-    global args, syncFilePath, syncRepoPath, cwd, verbosity, dryrun, _config
+    global syncFilePath, syncRepoPath, cwd, verbosity, dryrun, _config
     args, remaining_args = parseArguments()
 
     _config = getResolvedOptions(args)

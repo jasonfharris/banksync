@@ -315,12 +315,6 @@ def getCurrentBranchOrHash(absRepoPath):
 # Dictionary Operations
 # --------------------------------------------------------------------------------------------------------------------------
 
-def syncFileType(syncFilePath):
-    ext = os.path.splitext(syncFilePath)[-1][1:]
-    if ext in ['json','wl']:
-        return ext
-    return 'json'
-
 def writeBisectRestoreToJson(syncRepoPath, restoreDict):
     newFileContents = json.dumps(restoreDict, indent=4)
     absSyncRepoPath = os.path.abspath(syncRepoPath)
@@ -346,18 +340,7 @@ def loadSyncFileAsDict(syncFilePath):
     absSyncFilePath = os.path.abspath(syncFilePath)
     checkForSyncRepo(absSyncFilePath)
     with open(absSyncFilePath) as f:
-        txt = f.read()
-        if syncFileType(absSyncFilePath) == 'wl':
-            replacements = {
-                '<|':'{',
-                '|>':'}',
-                '{' :'[',
-                '}' :']',
-                '->' :':'
-            }
-            jsonTxt = multipleReplace(replacements,txt)
-        else:
-            jsonTxt = txt
+        jsonTxt = f.read()
         syncDict = json.loads(jsonTxt, object_pairs_hook=OrderedDict)
         if not syncDict:
             printWithVars1(f"failure! no repos where specified in the sync file at {absSyncFilePath}.", 'red')
@@ -365,10 +348,7 @@ def loadSyncFileAsDict(syncFilePath):
         return syncDict
 
 def writeDictToSyncFile(syncFilePath, dict):
-    if syncFileType(syncFilePath) == 'wl':
-        newFileContents = json.dumps(dict, indent=4, separators=(',', ' -> ')).replace("{","<|").replace("}","|>")
-    else:
-        newFileContents = json.dumps(dict, indent=4)    
+    newFileContents = json.dumps(dict, indent=4)    
     path = os.path.abspath(syncFilePath)
     with open(path, 'w') as f:
         f.write(newFileContents)
