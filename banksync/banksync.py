@@ -266,7 +266,7 @@ def parseArguments():
 
     commonOpts_parser = argparse.ArgumentParser(add_help=False)                                 
     commonOpts_parser.add_argument("--verbosity", metavar="NUM", help="Specify the level of reported feedback / detail. Acceptable values: 1 (minimal feedback), 2 (some feedback) , 3 (detailed feedback), or 4 (full feedback)", type=int, default=autoNum)
-    commonOpts_parser.add_argument('--colorize', metavar='BOOL', help=stringWithVars("Colorize the output: {colorizeOptionValues}"), choices=colorizeOptionValues, default='auto')
+    commonOpts_parser.add_argument('--colorize', metavar='BOOL', help=f"Colorize the output: {colorizeOptionValues}", choices=colorizeOptionValues, default='auto')
     commonOpts_parser.add_argument('--dryrun', dest='dryrun', action='store_true', help="Print what would happen instead of performing the command")
     commonOpts_parser.set_defaults(dryrun=False)
 
@@ -279,7 +279,7 @@ def parseArguments():
         return subparsers.add_parser(name, help=eval(name+'CmdHelp'), description=eval(name+'CmdDescription'), epilog=eval(name+'CmdEpilog'), parents = parent_parsers, formatter_class=argparse.RawDescriptionHelpFormatter)
         
     parser_syncCmd = addSubparser('sync')
-    parser_syncCmd.add_argument("--matching", metavar="MATCH", help=stringWithVars('specify how we can recognize a revision "match": {matchingOptionValues}'), choices=matchingOptionValues, default='auto')
+    parser_syncCmd.add_argument("--matching", metavar="MATCH", help=f'specify how we can recognize a revision "match": {matchingOptionValues}', choices=matchingOptionValues, default='auto')
 
     parser_recordReposCmd = addSubparser('recordRepos')
 
@@ -296,13 +296,13 @@ def parseArguments():
     parser_statusCmd = addSubparser('status')
 
     parser_bisectCmd = addSubparser('bisect')
-    parser_bisectCmd.add_argument("bisectcmd", metavar="BISECTCMD", nargs='?', help=stringWithVars("the bisect subcommand one of {bisectSubCommands}."), choices=bisectSubCommands, default='log')
+    parser_bisectCmd.add_argument("bisectcmd", metavar="BISECTCMD", nargs='?', help=f"the bisect subcommand one of {bisectSubCommands}.", choices=bisectSubCommands, default='log')
 
     parser_gitCmd = addSubparser('git')
-    parser_gitCmd.add_argument("gitcmd", metavar="GITCMD", nargs='?', help=stringWithVars("perform one of {approved_git_commands} on all the repos in the bank."), choices=allGitCommands, default='status')
+    parser_gitCmd.add_argument("gitcmd", metavar="GITCMD", nargs='?', help=f"perform one of {approved_git_commands} on all the repos in the bank.", choices=allGitCommands, default='status')
 
     parser_gitallCmd = addSubparser('gitall')
-    parser_gitallCmd.add_argument("gitcmd", metavar="GITCMD", nargs='?', help=stringWithVars("perform one of {approved_git_commands} on all the repos in the bank including the syncrepo."), choices=allGitCommands, default='status')
+    parser_gitallCmd.add_argument("gitcmd", metavar="GITCMD", nargs='?', help=f"perform one of {approved_git_commands} on all the repos in the bank including the syncrepo.", choices=allGitCommands, default='status')
 
     argcomplete.autocomplete(parser)
 
@@ -533,7 +533,7 @@ def commandCreateSyncrepo(repoNames):
 
     os.makedirs(syncRepoPath)
     with open(configFilePath, 'w') as f:
-        f.write(stringWithVars("[General]\ncwd=..\nsyncFile={syncfilename}"))
+        f.write(f"[General]\ncwd=..\nsyncFile={syncfilename}")
     execute2("git init", cwd=syncRepoPath)
 
     commandCreateSyncfile(repoNames)

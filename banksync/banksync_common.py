@@ -159,7 +159,7 @@ def gitCommand(cmdStr, verbosityThreshold = 3, **kwargs):
     ( code, sout, serr) = execute(cmdStr, verbosityThreshold, **opts)
     res = {'code':code, 'stdout':sout, 'stderr':serr }
     if opts['raiseOnFailure'] and code != 0:
-        raise Exception(stringWithVars("Bad git result {res}"))
+        raise Exception(f"Bad git result {res}")
     return res
 
 def getRevNumber(absRepoPath):
