@@ -549,13 +549,18 @@ def commandCreateSyncfile():
 # --------------------------------------------------------------------------------------------------------------------------
 
 def commandCreateSyncrepo():
-    global syncFileAbsPath
-    global syncRepoAbsPath
+    global syncRepoAbsPath, syncFileAbsPath
     syncfilename = _config['create_syncrepo.syncfilename']
     syncreponame = _config['create_syncrepo.syncreponame']
+
     syncRepoAbsPath = os.path.abspath(syncreponame)
-    syncFileAbsPath = os.path.join(syncRepoAbsPath, syncfilename)
-    configFilePath = os.path.join(syncRepoAbsPath, 'bankconfig.ini')
+    if isFilenameWithoutPath(syncfilename):
+        syncFileAbsPath = os.path.join(syncRepoAbsPath, syncfilename)
+    elif os.path.abspath(syncfilename) == syncRepoAbsPath:
+        syncFileAbsPath = os.path.abspath(syncfilename)
+    else:
+        printWithVars1(f"failure! sync file name: {syncfilename} does not live directly inside {syncreponame}.", 'red')
+        sys.exit(1)
 
     if os.path.isdir(syncRepoAbsPath):
         printWithVars1(f"failure! The directory {syncRepoAbsPath} already exists.", 'red')
@@ -848,6 +853,18 @@ def dispatchCommand():
 # Extract and clean the argument parameters
 # --------------------------------------------------------------------------------------------------------------------------
 
+def determinePaths(bankOptions):
+    #determine syncFileAbsPath and syncRepoAbsPath
+    command = bankOptions['args.command']
+    if command == 'clone' or command == 'create_syncrepo':
+        syncFileAbsPath = None
+        syncRepoAbsPath = None
+    else:
+        syncFileAbsPath = os.path.abspath(bankOptions['general.syncfile'])
+        syncRepoAbsPath = os.path.dirname(syncFileAbsPath)
+    return syncFileAbsPath, syncRepoAbsPath
+
+
 def getResolvedOptions(args, remaining_args):
 
     bankOptions = flattenDict(dict(defaultOptions))
@@ -900,12 +917,12 @@ def main():
     args, remaining_args = parseArguments()
 
     _config = getResolvedOptions(args, remaining_args)
+    syncFileAbsPath, syncRepoAbsPath = determinePaths(bankOptions)
 
     cwd = _config['general.cwd']
+
     verbosity = _config['general.verbosity']
     colorize = _config['general.colorize']
-    syncFileAbsPath = _config['general.syncfile']
-    syncRepoAbsPath = os.path.dirname(os.path.abspath(syncFileAbsPath))
     dryrun = _config['args.dryrun']
     set_execute_defaults('verbosity', verbosity)
     set_execute_defaults('dryrun', dryrun)
