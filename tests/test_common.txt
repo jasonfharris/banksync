@@ -21,6 +21,8 @@
 {'DEFAULT': {}, 'sec1': {'key1': 'value1', 'key2': 'value2', 'key3': 'value3'}, 'sec2': {'keya': 'valueA', 'keyb': 'valueB', 'keyc': 'valueC'}, 'sec3': {'foo': 'x', 'bar': 'y', 'baz': 'z'}}
 
 
+# Test flattenDict and mergeOptionDicts
+
 >>> flattenDict(flattenDict(iniDict))
 {'sec1.key1': 'value1', 'sec1.key2': 'value2', 'sec1.key3': 'value3', 'sec2.keya': 'valueA', 'sec2.keyb': 'valueB', 'sec2.keyc': 'valueC', 'sec3.foo': 'x', 'sec3.bar': 'y', 'sec3.baz': 'z'}
 
@@ -29,15 +31,39 @@
 >>> mergeOptionDicts(flattenDict(iniDict), flattenDict(newDict))
 {'sec1.key1': 'value1', 'sec1.key2': 'fish', 'sec1.key3': 'value3', 'sec2.keya': 'bird', 'sec2.keyb': 'valueB', 'sec2.keyc': 'valueC', 'sec3.foo': 'x', 'sec3.bar': 'y', 'sec3.baz': 'z'}
 
+# Test escapeAnsi
+
 >>> escapeAnsi(colored("hello",'red'))
 'hello'
+
+
+# Test correctlyQuoteArg
 
 >>> correctlyQuoteArg('onewholeitem')
 'onewholeitem'
 >>> correctlyQuoteArg('an item with gaps')
 '"an item with gaps"'
 
+
+# Test isFilenameWithoutPath
+
 >>> isFilenameWithoutPath("bob/syncfile.json")
 False
 >>> isFilenameWithoutPath("syncfile.json")
 True
+
+
+# Test getRepoNameFromUrl
+
+>>> getRepoNameFromUrl("http://example.com/project_Foo_sync_repo.git")
+'project_Foo'
+>>> getRepoNameFromUrl("https://example.com/project_boo/sync_repo.git")  # 'project_boo'
+'WrapperProject'
+>>> getRepoNameFromUrl("https://example.com/project_name_sync_repo.git")
+'project_name'
+>>> getRepoNameFromUrl("http://example.com/projectNameSyncRepo.git")
+'projectName'
+>>> getRepoNameFromUrl("https://example.com/someProjectRepo.git")
+'someProjectRepo'
+>>> getRepoNameFromUrl("https://example.com/syncRepo.git")
+'WrapperProject'
