@@ -20,16 +20,12 @@
 
 >>> ans = execute4('mkdir repoFish')
 >>> ans = execute4('git init', cwd='repoFish')
->>> ans = execute4('git remote add origin https://github.com/testbank/repoFish.git', cwd='repoFish')
 
 >>> ans = execute4('mkdir repoBird')
 >>> ans = execute4('git init', cwd='repoBird')
->>> ans = execute4('git remote add origin https://github.com/testbank/repoBird.git', cwd='repoBird')
 
 >>> ans = execute4('mkdir repoSyncFile')
 >>> ans = execute4('git init', cwd='repoSyncFile')
->>> ans = execute4('echo "[general]\ncwd=..\nsyncFile=syncfile.json" > repoSyncFile/bankconfig.ini')
->>> ans = execute4('git remote add origin https://github.com/testbank/animalsSyncRepo.git', cwd='repoSyncFile')
 
 
 # Filling Repos Sync Point 1
@@ -45,7 +41,7 @@
 >>> sparrowHash = currentHash('repoBird')
 
 >>> ans = execute4('../bank_local create_syncfile repoFish repoBird', cwd='repoSyncFile')
->>> ans = execute4('git add syncfile.json bankconfig.ini', cwd='repoSyncFile')
+>>> ans = execute4('git add syncfile.json', cwd='repoSyncFile')
 >>> ans = execute4('git commit -am "syncPoint1"', cwd='repoSyncFile')
 >>> syncPoint1 = currentHash('repoSyncFile')
 >>> time.sleep(4)
@@ -63,7 +59,7 @@
 >>> hawkHash = currentHash('repoBird')
 
 >>> ans = execute4('../bank_local record_repos', cwd='repoSyncFile')
->>> ans = execute4('git add syncfile.json bankconfig.ini', cwd='repoSyncFile')
+>>> ans = execute4('git add syncfile.json', cwd='repoSyncFile')
 >>> ans = execute4('git commit -am "syncPoint2"', cwd='repoSyncFile')
 >>> syncPoint2 = currentHash('repoSyncFile')
 >>> time.sleep(4)
@@ -81,7 +77,7 @@
 >>> eagleHash = currentHash('repoBird')
 
 >>> ans = execute4('../bank_local record_repos', cwd='repoSyncFile')
->>> ans = execute4('git add syncfile.json bankconfig.ini', cwd='repoSyncFile')
+>>> ans = execute4('git add syncfile.json', cwd='repoSyncFile')
 >>> ans = execute4('git commit -am "syncPoint3"', cwd='repoSyncFile')
 >>> syncPoint3 = currentHash('repoSyncFile')
 

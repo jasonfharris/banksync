@@ -26,7 +26,6 @@ This will git clone the thin syncrepo, which contains the syncfile, and then pop
     ├── repoFish
     │   └── Fish.txt
     └── syncrepo
-        ├── bankconfig.ini
         └── syncfile.json
 
 
@@ -56,7 +55,6 @@ Let's break down the quick start process into steps.
    ```
    animals
    └── animalsSyncRepo
-       ├── bankconfig.ini
        └── syncfile.json
    ```
 
@@ -72,7 +70,6 @@ Let's break down the quick start process into steps.
    ```
    animals
    ├── animalsSyncRepo
-   │   ├── bankconfig.ini
    │   └── syncfile.json
    ├── repoBird
    │   └── Bird.txt
@@ -106,6 +103,7 @@ The syncfile specifies which repositories are part of the bank, and what state t
 
 Which yields:
 
+XXX update
 ```
 {
     "repoFish" : {
@@ -146,6 +144,7 @@ So now we can update the syncfile with the state of the current repos in the ban
 
 The contents of our syncfile will now be something like:
 
+XXX update
 ```
 {
     "repoFish" : {
@@ -179,7 +178,9 @@ So we could now record this new overall state of the repos in the bank via simpl
 
 ## Locations
 
-How does the bank command determine the locations for `repoBird` and `repoFish`, as well as the appropriate syncfile to use? The answer lies in the `bankconfig.ini` file within the syncrepo. In this example, two key options are present: `cwd=..` and `syncfile=syncfile.json`.
+How does the bank command determine the locations for `repoBird` and `repoFish`, as well as the appropriate
+syncfile to use? The paths are stored in the syncfile itself (along with other information). In this example, two key
+options are present: `cwd=..` and `syncfile=syncfile.json`.
 
 The cwd (Change Working Directory) option indicates the relative path where repo commands should be executed. In this case, it is one level above our current working directory. Given that the syncfile is located in `~/animals/animalsSyncRepo`, this means that the repo paths will originate from `~/animals/`. For example, the path for "Birds" in the syncfile is simply `repoBird`. Relative to `animals/animalsSyncRepo`, and considering the `cwd` of `..`, we can determine the repo path for "birds". This is calculated as `animals/animalsSyncRepo` + `..` + `repoBird`, resulting in `animals/repoBird`, which is the storage location for the "Birds" repo.
 
@@ -213,21 +214,13 @@ When attempting to sync the constituent repos to the versions specified in the s
 - **timestamps**: try matching by sha first but if that fails find the first revision with the same unix timestamp. (This is almost always preserved across repo manipulation)
 - **closetimestamps**: try matching by sha first, if that fails try matching by timestamp. and if that fails find the revision with the closest timestamp and match to that.
 
-## Config file
+## Options in the sync file
 
-Instead of specifying the `--syncfile` and`—cwd` in each command you can create a `bankconfig.ini` file alongside the syncfile. In the `bankconfig.ini` file you can specify the default syncfile and cwd to use if none is specified. Eg we could add the file `animals/animalsSyncRepo/bankconfig.ini` with the following contents:
-
-    [general]
-    cwd=..
-    syncFile=syncfile.json
-
-Then you could omit the options to the bank command and they would be taken from the bankconfig.ini file so the above example would become:
+The sync file itself contains a 'configuration' section where you can specify prevailing options. So the above example would become:
 
     cd animals/animalsSyncRepo
     bank record_repos
     git commit -am "recording the latest state of the repos in animals."
-
-You can choose weather to include the `bankconfig.ini` in the syncrepo history or not. (We choose to in this example but other teams may leave this to the individual developers.)
 
 ## Commands
 
@@ -264,11 +257,11 @@ This would generate or overwrite the syncfile.json to contain sync points for th
 
 #### bank create_syncrepo <opts>
 
-`create_syncrepo` is used to generate the syncrepo directory, initialize a git repository there, create the syncfile and also create the bankconfig.ini file. Basically it creates all the working parts of a syncrepo. Eg:
+`create_syncrepo` is used to generate the syncrepo directory, initialize a git repository there, and create the syncfile. Basically it creates all the working parts of a syncrepo. Eg:
 
     bank create_syncrepo repo1 repo2 ... repoN
 
-This would create the directory `syncrepo` and fill it with a `syncfile.json` and a `bankconfig.ini`. The syncfile would contain the latest states of the `repo1`, `repo2`, ... `repoN`. 
+This would create the directory `syncrepo` and fill it with a `syncfile.json`. The syncfile would contain the latest states of the `repo1`, `repo2`, ... `repoN`. 
 
     bank create_syncrepo --syncreponame controlrepo --syncfilename felipe.json repo1 repo2 ... repoN
 

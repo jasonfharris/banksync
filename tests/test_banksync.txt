@@ -21,11 +21,9 @@
 
 >>> ans = execute4('mkdir repoFish')
 >>> ans = execute4('git init', cwd='repoFish')
->>> ans = execute4('git remote add origin https://github.com/testbank/repoFish.git', cwd='repoFish')
 
 >>> ans = execute4('mkdir repoBird')
 >>> ans = execute4('git init', cwd='repoBird')
->>> ans = execute4('git remote add origin https://github.com/testbank/repoBird.git', cwd='repoBird')
 
 >>> ans = execute4('mkdir repoSyncFile')
 >>> ans = execute4('git init', cwd='repoSyncFile')
@@ -238,16 +236,20 @@ True
 
 # Test populate
 
+>>> ans = execute4('rm -rf zoosyncrepo')
+>>> ans = execute4('git remote add origin https://github.com/testbank/repoBird.git', cwd='repoBird')
+>>> ans = execute4('git remote add origin https://github.com/testbank/repoFish.git', cwd='repoFish')
+>>> ans = execute4('./bank_local create_syncrepo --syncreponame zoosyncrepo --syncfilename joekeeper.json repoFish repoBird')
 >>> ans = execute4('rm -rf repoFish repoBird')
 
->>> ans = execute4('git checkout {zooFinal}', cwd='zoosyncrepo')
->>> zooFinal == currentHash('zoosyncrepo')
-True
 >>> ans = execute4('../bank_local populate', cwd='zoosyncrepo')
 >>> 'a27368bec17373938b1dcf73638945b89b60a9d0' == currentHash('repoFish')
 True
 >>> '6bf9d646b2aa224b64fb86cbddb4d7ab0f2e37d3' == currentHash('repoBird')
 True
+
+
+
 
 
 # Test clone

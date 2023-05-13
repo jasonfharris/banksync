@@ -112,9 +112,8 @@ traditional ways to specify submodules by allowing some looseness / decoupling.
 The bank command line utility can also be used to issue a normal git command to every repository specified in the
 syncfile through use of `bank git <cmd>` and `bank gitall <cmd>`. Ie to issue the git command <cmd> to every repo in the bank of repos.
 
-All of the options, eg the --syncfile option, etc., can be specified in a standard ini config file
-`bankconfig.ini` so they do not need to be specified each time on the command line. If the bank command uses the config
-file than the bank command must be executed from the same directory which contains the bankconfig.ini file. ''')
+All of the options, can be specified in in the syncfile itself or in your ~/.backsyncrc file so they do not
+need to be specified each time on the command line. See the documentation for the syncfile for more information.''')
 
 cmdHelp = {}
 cmdDescription = {}
@@ -124,7 +123,8 @@ cmdEpilog = {}
 
 cmdHelp['sync'] = 'checkout / update the repos given in the syncfile to the states given in the syncfile'
 cmdDescription['sync'] = cmdHelp['sync']
-cmdEpilog ['sync']= wrapParagraphs('''Example usage:
+cmdEpilog ['sync']= wrapParagraphs(
+    '''Example usage:
 
   bank sync --syncfile syncfile.json
 
@@ -138,8 +138,7 @@ in the syncfile.json.
 
   bank sync
 
-Use the syncfile specified in the file bankconfig.ini and list the results of the sync
-on each repo in the bank.
+Use the syncfile in the current syncrepo directory and list the results of the sync on each repo in the bank.
 ''')
 
 
@@ -258,7 +257,7 @@ Perform git status and list the results on each of the repositories specified in
 
   bank git tag release_1.7.0.1
 
-Use the syncfile specified in the file bankconfig.ini and apply the command `git tag release_1.7.0.1` to each of the
+Use the prevailing syncfile and apply the command `git tag release_1.7.0.1` to each of the
 repos in the bank.
 ''')
 
@@ -284,7 +283,7 @@ and in addition to the actual repo containing the sync file (the syncrepo)
 
   bank gitall tag release_1.7.0.1
 
-Use the syncfile specified in the file bankconfig.ini and apply the command `git tag release_1.7.0.1` to each of the
+Use the prevailing syncfile and apply the command `git tag release_1.7.0.1` to each of the
 repos in the bank and in addition to the actual repo containing the sync file (the syncrepo).
 ''')
 
@@ -933,12 +932,6 @@ def getResolvedOptions(args, remaining_args):
     bankOptions = flattenDict(dict(defaultOptions))
     if os.path.isfile('~/.bankconfigrc'):
         newOptions = flattenDict(getOptionDictFromIniFile('~/.bankconfigrc'))
-        bankOptions = mergeOptionDicts(bankOptions, newOptions)
-
-    # Get the config file path
-    configFile = os.path.abspath('bankconfig.ini')
-    if os.path.isfile(configFile):
-        newOptions = flattenDict(getOptionDictFromIniFile(configFile))
         bankOptions = mergeOptionDicts(bankOptions, newOptions)
 
     passedInOptions = {
