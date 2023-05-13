@@ -42,7 +42,7 @@ defaultOptions = {
     }
 }
 
-sync_commands = ['sync', 'record_repos', 'create_syncfile', 'create_syncrepo', 'bisect', 'clone', 'populate', 'git', 'gitall']
+banksync_commands = ['sync', 'record_repos', 'bisect', 'populate', 'git', 'gitall', 'create_syncfile', 'create_syncrepo', 'clone']
 approved_git_commands = ['reset', 'log', 'status', 'branch', 'checkout', 'commit', 'tag', 'diff', 'fetch',
                          'push', 'pull', 'prune', 'gc', 'fsck', 'ls-files', 'ls-remote', 'ls-tree']
 
@@ -84,7 +84,7 @@ allGitCommands = [
   'credential-cache--daemon',  'http-push',                 'pack-refs',                 'shell',
 ]
 
-commands = sync_commands + allGitCommands
+commands = banksync_commands + allGitCommands
 matchingOptionValues = ['shaOnly', 'timestamp', 'closetimestamp']
 colorizeOptionValues = ['yes', 'no']
 
