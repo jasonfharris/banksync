@@ -11,6 +11,7 @@ from sysexecute import *
 from .banksync_common import *
 
 __version__ = "0.9.10"
+__sync_file_version__ = "1.0"
 
 # --------------------------------------------------------------------------------------------------------------------------
 # Defines
@@ -529,12 +530,16 @@ def commandRecordRepos():
 def commandCreateSyncfile():
     repoNames = _config['args.repos']
     checkForSyncRepoDir(syncRepoAbsPath, existing = False)
+
+    # Assemble the dictionary of repo Information for each repo
     dictOfRepoInfo = OrderedDict()
+    repoAbsPaths = {}
     anyFailures = False
     for repo in repoNames:
         offset = _config['relativePathToRepositories']
-        repoAbsPath = os.path.join(syncRepoAbsPath, offset, repo)
+        repoAbsPath = os.path.normpath(os.path.join(syncRepoAbsPath, offset, repo))
         repoName = os.path.basename(repoAbsPath)
+        repoAbsPaths[repoName] = repoAbsPath
         repoString = paddedRepoName(repoName, repoNames)
         if not checkForRepo(repoName, repoAbsPath):
             anyFailures = True
@@ -550,12 +555,32 @@ def commandCreateSyncfile():
             printWithVars2(f"failure! not able to get the status of {repoName} at {repoAbsPath}", 'red')
             anyFailures = True
         dictOfRepoInfo[repoName] = newRepoInfo
-    
+
+    # Find the common root path for the repos and what that is relative to the syncRepoAbsPath to get the
+    # computed offset and adjust the path's accordingly.
+    commonPathPrefix = os.path.dirname(os.path.commonprefix(list(repoAbsPaths.values())))
+    offset = os.path.relpath(commonPathPrefix, syncRepoAbsPath)
+    root = os.path.join(syncRepoAbsPath, offset)
+
+    for repoName in dictOfRepoInfo:
+        repoInfo = dictOfRepoInfo[repoName]
+        repoAbsPath = repoAbsPaths[repoName]
+        repoInfo["path"] = os.path.relpath(repoAbsPath, root)
+
+    # Assemble The combined information with configuration and repositories
+    configurationDict = OrderedDict()
+    configurationDict["createdByBanksyncVersion"] = __version__
+    configurationDict["syncfileFormatVersion"] = __sync_file_version__
+    configurationDict["cwd"] = offset
+    configurationDict["syncreponameForClone"] = os.path.relpath(syncRepoAbsPath, root)
+    newSyncDict = OrderedDict()
+    newSyncDict["configuration"] = configurationDict
+    newSyncDict["repositories"] = dictOfRepoInfo
 
     if dryrun:
         sys.exit(0)
 
-    writeDictToSyncFile(syncFileAbsPath, dictOfRepoInfo)
+    writeDictToSyncFile(syncFileAbsPath, newSyncDict)
 
     if anyFailures:
         printWithVars1("failure! not all constituent repos had their state recorded.",'red',)
