@@ -36,3 +36,8 @@
 'onewholeitem'
 >>> correctlyQuoteArg('an item with gaps')
 '"an item with gaps"'
+
+>>> isFilenameWithoutPath("bob/syncfile.json")
+False
+>>> isFilenameWithoutPath("syncfile.json")
+True

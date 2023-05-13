@@ -261,6 +261,14 @@ def isValidGitUrl(url):
     return gitUrlPattern.match(url) or os.path.exists(url)
 
 
+
+# --------------------------------------------------------------------------------------------------------------------------
+# path operations
+# --------------------------------------------------------------------------------------------------------------------------
+
+def isFilenameWithoutPath(filename):
+    return not bool(os.path.dirname(filename))
+
 def moveDirectory(srcDir, destDir):
     """Move a directory to a new location, using a temporary directory to avoid issues with moving into a subdirectory."""
     if not os.path.exists(srcDir):
