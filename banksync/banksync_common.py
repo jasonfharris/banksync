@@ -31,7 +31,7 @@ autoNum = -1       # an arbitrary negative number to stand in for 'auto' in a nu
 
 def multipleReplace(mapping, text):
     """Replace multiple substrings in 'text' according to the given 'mapping' dictionary."""
-    regex = re.compile("(%s)" % "|".join(map(re.escape, mapping.keys())))
+    regex = re.compile(f'({"|".join(map(re.escape, mapping.keys()))})')
     return regex.sub(lambda mo: mapping[mo.string[mo.start():mo.end()]], text)
 
 def dateFromTimestamp(ts):
@@ -40,14 +40,11 @@ def dateFromTimestamp(ts):
 
 def isSha1Str(s):
     """Check if the given string 's' is a valid SHA-1 hash."""
-    return True if re.match(r'^[0-9a-fA-F]{40}$', s) else False
+    return bool(re.match(r'^[0-9a-fA-F]{40}$', s))
 
 def correctlyQuoteArg(arg):
     """Quote the input 'arg' if it contains whitespace characters."""
-    m = re.match(r'.*\s+.*', arg)
-    if m:
-        return f'"{arg}"'
-    return arg
+    return f'"{arg}"' if re.match(r'.*\s+.*', arg) else arg
 
 def wrapParagraphs(text):
     """Wrap the paragraphs of a given 'text' to fit within an 80-character width."""
@@ -70,13 +67,7 @@ def isAutomatic(val):
     return val == "auto" or val == autoNum or val is None
 
 def iniParserToOptionDict(parser):
-    d = {}
-    for sec in parser:
-        secd = {}
-        for key in parser[sec]:
-            secd[key]= parser[sec][key]
-        d[sec] = secd
-    return d
+    return {sec: {key: parser[sec][key] for key in parser[sec]} for sec in parser}
 
 def getOptionDictFromIniFile(configFile):
     config = configparser.ConfigParser()
