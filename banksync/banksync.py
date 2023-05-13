@@ -91,7 +91,6 @@ allGitCommands = [
   'credential-cache--daemon',  'http-push',                 'pack-refs',                 'shell',
 ]
 
-commands = banksync_commands + allGitCommands
 matchingOptionValues = ['shaOnly', 'timestamp', 'closetimestamp']
 colorizeOptionValues = ['yes', 'no']
 
@@ -339,7 +338,7 @@ def parseArguments():
     args, remaining_args = parser.parse_known_args()
     command = args.command
 
-    if (not command in commands) and (not command in allGitCommands):
+    if (not command in banksync_commands):
         printWithVars1(f"unknown command: {command}", 'red')
         sys.exit(1)
 
