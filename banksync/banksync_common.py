@@ -316,6 +316,8 @@ def writeBisectRestoreToJson(syncRepoAbsPath, restoreDict):
 def loadBisectRestoreFromJson(syncRepoAbsPath):
     checkForSyncRepoDir(syncRepoAbsPath)
     bisectRestoreAbsPath = os.path.join(syncRepoAbsPath, '.bisectRestore')
+    if not os.path.exists(bisectRestoreAbsPath):
+        return None
     with open(bisectRestoreAbsPath) as f:
         jsonTxt = f.read()
         restoreDict = json.loads(jsonTxt, object_pairs_hook=OrderedDict)

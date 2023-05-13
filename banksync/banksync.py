@@ -665,6 +665,9 @@ def commandBisect():
 
     if command == 'reset':
         restoreDict = loadBisectRestoreFromJson(syncRepoAbsPath)
+        if not restoreDict:
+            print(colored("We are not in a bisection or bisection record not found.", 'yellow'))
+            sys.exit(0)
         for repoName in syncDict:
             repoInfo = syncDict[repoName]
             offset = _config['relativePathToRepositories']
