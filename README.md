@@ -179,7 +179,7 @@ So we could now record this new overall state of the repos in the bank via simpl
 
 ## Locations
 
-How does the bank command know where to put the `repoBird` and `repoFish`? How does it know which syncfile to use, etc. Well in the syncrepo there is the file `bankconfig.ini`. This is a standard preferences file but in this example it has two important options: `cwd=..` and `syncfile=syncfile.json`.
+How does the bank command determine the locations for `repoBird` and `repoFish`, as well as the appropriate syncfile to use? The answer lies in the `bankconfig.ini` file within the syncrepo. In this example, two key options are present: `cwd=..` and `syncfile=syncfile.json`.
 
 The cwd (Change Working Directory) option indicates the relative path where repo commands should be executed. In this case, it is one level above our current working directory. Given that the syncfile is located in `~/animals/animalsSyncRepo`, this means that the repo paths will originate from `~/animals/`. For example, the path for "Birds" in the syncfile is simply `repoBird`. Relative to `animals/animalsSyncRepo`, and considering the `cwd` of `..`, we can determine the repo path for "birds". This is calculated as `animals/animalsSyncRepo` + `..` + `repoBird`, resulting in `animals/repoBird`, which is the storage location for the "Birds" repo.
 
@@ -192,10 +192,6 @@ The command line tool `bank` has several options which can be specified:
 #### --syncfile <path>
 
 The `syncfile` option specifies a syncfile. The syncfile contents specify which repos are part of the bank. The various keys which are recorded if present are:`path`, `sha`, `UnixTimeStamp`, `date`, `author`, `revisionNumber`, `message`, and `cloneURL`. Adding other keys at present will not effect or change the behavior of the bank tool so you can add other info as you see fit / want to each of the recorded states in the various repos.
-
-#### --cwd <path>
-
-The cwd option will change the working directory. Using this you can specify the relative path to get to the base of where the path for each of the repos in the bank are. For instance in the layout example of the animals project above, if we are in the directory `animals/animalsSyncRepo` then since the path in the syncfile for "Birds" is just `repoBird` then relative to `animals/animalsSyncRepo` we want the directory `../repoBird`. So we would use the option `--cwd ..`
 
 #### --dryrun
 
