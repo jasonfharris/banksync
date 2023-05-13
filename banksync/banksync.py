@@ -42,7 +42,14 @@ defaultOptions = {
     }
 }
 
-banksync_commands = ['sync', 'record_repos', 'bisect', 'populate', 'git', 'gitall', 'create_syncfile', 'create_syncrepo', 'clone']
+# These can create a syncrepo or syncfile
+banksync_creation_commands = ['create_syncfile', 'create_syncrepo', 'clone']
+
+# These commands use an existing syncfile
+banksync_operation_commands = ['sync', 'record_repos', 'bisect', 'populate', 'git', 'gitall', 'status']
+banksync_commands = banksync_creation_commands + banksync_operation_commands
+
+# List of git commands that are suitable for operating over multiple repositories in the bank collection. (This list may not be exhaustive)
 approved_git_commands = ['reset', 'log', 'status', 'branch', 'checkout', 'commit', 'tag', 'diff', 'fetch',
                          'push', 'pull', 'prune', 'gc', 'fsck', 'ls-files', 'ls-remote', 'ls-tree']
 
