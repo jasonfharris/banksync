@@ -109,11 +109,6 @@ def mergeOptionDicts(d1,d2):
 # Repo Checking
 # --------------------------------------------------------------------------------------------------------------------------
 
-def getAbsRepoPath(path, cwd = "."):
-    if cwd == ".":
-        return os.path.abspath(path)
-    return os.path.abspath(os.path.join(cwd, path))
-
 def paddedRepoName(repoName, names):
     maxRepoNameLength = 0                     # maxRepoNameLength
     for name in names:
@@ -358,12 +353,11 @@ def writeDictToSyncFile(syncFilePath, dict):
     printWithVars3(f"Wrote new dictionary of bank sync information to {path}")
 
 
-def dictFromCurrentRepoState(path, **kwargs):
+def dictFromCurrentRepoState(repoAbsPath, root, **kwargs):
     opts = merge({'cwd':".", 'verbosity': 3, 'raiseOnFailure': True}, kwargs)
-    repoAbsPath = getAbsRepoPath(path, opts['cwd'])
     opts['cwd'] = repoAbsPath
     newRepoInfo = OrderedDict()
-    newRepoInfo["path"] = path
+    newRepoInfo["path"] = os.path.relpath(repoAbsPath, root)
     succeeded = True
     try:
         res = gitCommand("git log HEAD -n 1 --date=iso --format=format:'\"sha\" : \"%H\",%n\"UnixTimeStamp\" : \"%at\",%n\"date\" : \"%ad\",%n\"author\" : \"%an\"'", **opts)

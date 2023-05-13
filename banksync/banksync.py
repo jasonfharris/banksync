@@ -27,7 +27,6 @@ defaultSyncPointBranchName = "syncPoint"
 
 defaultOptions = {
     'general' : {
-        'cwd' : '.',
         'syncfile' : 'syncfile.json',
         'verbosity' : 2,
         'colorize' : 'yes',
@@ -112,7 +111,7 @@ traditional ways to specify submodules by allowing some looseness / decoupling.
 The bank command line utility can also be used to issue a normal git command to every repository specified in the
 syncfile through use of `bank git <cmd>` and `bank gitall <cmd>`. Ie to issue the git command <cmd> to every repo in the bank of repos.
 
-All of the options, eg the --syncfile option, the --cwd  option, etc., can be specified in a standard ini config file
+All of the options, eg the --syncfile option, etc., can be specified in a standard ini config file
 `bankconfig.ini` so they do not need to be specified each time on the command line. If the bank command uses the config
 file than the bank command must be executed from the same directory which contains the bankconfig.ini file. ''')
 
@@ -129,10 +128,10 @@ syncCmdEpilog = wrapParagraphs('''Example usage:
 This would checkout / update the repos given in the syncfile.json to the states given
 in the syncfile.json.
 
-  bank sync --syncfile syncfile.json --cwd ../other/dir
+  bank sync --syncfile some/dir/syncfile.json
 
-This would checkout / update the repos given in the syncfile.json to the states given
-in the syncfile.json (but the path to the repos are prefixed by the value of cwd).
+This would checkout / update the repos given in the syncfile.json located at some/dir to the states given
+in the syncfile.json.
 
   bank sync
 
@@ -159,10 +158,12 @@ create_syncfileCmdHelp = 'create or overwrite the syncfile to contain the curren
 create_syncfileCmdDescription = create_syncfileCmdHelp
 create_syncfileCmdEpilog = wrapParagraphs('''Example usage:
 
-  bank create_syncfile --syncfile syncfile.json --cwd .. repo1 repo2 ... repoN
+  bank create_syncfile --syncfile syncrepo/syncfile.json repo1 repo2 ... repoN
 
-This would create or overwrite the syncfile.json to record the current states of repo1 repo2 ... repoN which are located
-one directory level up.
+This would create or overwrite the syncfile.json to record the current states of repo1 repo2 ... repoN. Alternatively you could execute
+
+  bank create_syncfile --syncfile syncfile.json path1/to/repo1 path2/to/repo2 ... path3/to/repoN
+
 ''')
 
 
@@ -175,12 +176,24 @@ create_syncrepoCmdEpilog = wrapParagraphs('''Example usage:
   bank create_syncrepo repo1 repo2 ... repoN
 
 This would create and initilize a git repository called syncrepo and inside there it would create the syncfile.json
-to record the current states of the repo1 repo2 ... repoN which are located at this level. It would also create the
-bankconfig.ini inside this repo.
+to record the current states of the repo1 repo2 ... repoN which are located at this level. repo1, repo2, etc
+are the names or paths to the repositories to track in the bank collection. 
 
-  bank create_syncrepo --syncrepo <syncreponame> repo1 repo2 ... repoN --cwd some/dir
+  bank create_syncrepo --syncrepo <syncreponame> repo1 repo2 ... repoN
 
 This would create the syncrepo as the above command, but the repo would be called syncreponame.
+
+  bank create_syncrepo --syncrepo some/path/syncreponame repo1 repo2 ... repoN
+
+  This would create the syncrepo as the above command, but the repo would be called syncreponame and located
+  at some/path relative to the current directory.
+
+  bank create_syncrepo --syncrepo some/path/syncreponame --syncfilename devCollection.json repo1 repo2 ...
+  repoN
+  
+  This would create the syncrepo as the above command, but the syncfile would be named devCollection.json and located
+  at some/path/syncreponame/devCollection.json relative to the current directory.
+
 ''')
 
 #  CMD: clone ----------
@@ -276,7 +289,6 @@ def parseArguments():
 
     pathOps_parser = argparse.ArgumentParser(add_help=False)
     pathOps_parser.add_argument("--syncfile", metavar="SYNCFILE", help="the path to the syncfile", default='auto')
-    pathOps_parser.add_argument("--cwd", metavar="CWD", help="prefix / change the working directory for the repos in the sync file", default='auto')
 
     commonOpts_parser = argparse.ArgumentParser(add_help=False)
     commonOpts_parser.add_argument("--verbosity", metavar="NUM", help="Specify the level of reported feedback / detail. Acceptable values: 1 (minimal feedback), 2 (some feedback) , 3 (detailed feedback), or 4 (full feedback)", type=int, default=autoNum)
@@ -385,7 +397,8 @@ def commandSync():
 
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
-        repoAbsPath = getAbsRepoPath(repoInfo["path"], cwd)
+        offset = _config['relativePathToRepositories']
+        repoAbsPath = os.path.join(syncRepoAbsPath, offset, repoInfo["path"])
         repoString = paddedRepoName(repoName, list(syncDict.keys()))
         if not checkForRepo(repoString, repoAbsPath):
             allFound = False
@@ -477,12 +490,15 @@ def commandRecordRepos():
     anyFailures = False
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
-        repoAbsPath = getAbsRepoPath(repoInfo["path"], cwd)
+        offset = _config['relativePathToRepositories']
+        repoAbsPath = os.path.join(syncRepoAbsPath, offset, repoInfo["path"])
         repoString = paddedRepoName(repoName, list(syncDict.keys()))
         if not checkForRepo(repoString, repoAbsPath):
             anyFailures = True
             continue
-        (worked, newRepoInfo) = dictFromCurrentRepoState(repoInfo["path"], cwd=cwd, verbosity=verbosity, dryrun=False)
+
+        root = os.path.join(syncRepoAbsPath, offset)
+        (worked, newRepoInfo) = dictFromCurrentRepoState(repoAbsPath, root, verbosity=verbosity, dryrun=False)
         if worked:
             shortHash = newRepoInfo["sha"][0:12]
             date = newRepoInfo["date"]
@@ -512,16 +528,19 @@ def commandRecordRepos():
 def commandCreateSyncfile():
     repoNames = _config['args.repos']
     checkForSyncRepoDir(syncRepoAbsPath, existing = False)
-    newSyncDict = OrderedDict()
+    dictOfRepoInfo = OrderedDict()
     anyFailures = False
     for repo in repoNames:
-        repoAbsPath = getAbsRepoPath(repo, cwd)
+        offset = _config['relativePathToRepositories']
+        repoAbsPath = os.path.join(syncRepoAbsPath, offset, repo)
         repoName = os.path.basename(repoAbsPath)
         repoString = paddedRepoName(repoName, repoNames)
         if not checkForRepo(repoName, repoAbsPath):
             anyFailures = True
             continue
-        (worked, newRepoInfo) = dictFromCurrentRepoState(repo, cwd=cwd, verbosity=verbosity, dryrun=False)
+
+        root = os.path.join(syncRepoAbsPath, offset)
+        (worked, newRepoInfo) = dictFromCurrentRepoState(repoAbsPath, root, verbosity=verbosity, dryrun=False)
         if worked:
             shortHash = newRepoInfo["sha"][0:12]
             date = newRepoInfo["date"]
@@ -529,12 +548,13 @@ def commandCreateSyncfile():
         else:
             printWithVars2(f"failure! not able to get the status of {repoName} at {repoAbsPath}", 'red')
             anyFailures = True
-        newSyncDict[repoName] = newRepoInfo
+        dictOfRepoInfo[repoName] = newRepoInfo
+    
 
     if dryrun:
         sys.exit(0)
 
-    writeDictToSyncFile(syncFileAbsPath, newSyncDict)
+    writeDictToSyncFile(syncFileAbsPath, dictOfRepoInfo)
 
     if anyFailures:
         printWithVars1(f"failure! not all constituent repos had their state recorded.", 'red')
@@ -567,12 +587,10 @@ def commandCreateSyncrepo():
         sys.exit(1)
 
     if dryrun:
-        printWithVars1(f"The directory {syncRepoAbsPath} would be created and a git repository would be initilized there. The file {configFilePath} and {syncFileAbsPath} would be created and filled.")
+        printWithVars1(f"The directory {syncRepoAbsPath} would be created and a git repository would be initilized there. The file {syncFileAbsPath} would be created and filled.")
         sys.exit(0)
 
     os.makedirs(syncRepoAbsPath)
-    with open(configFilePath, 'w') as f:
-        f.write(f"[general]\ncwd=..\nsyncFile={syncfilename}")
     execute2("git init", cwd=syncRepoAbsPath)
 
     commandCreateSyncfile()
@@ -599,7 +617,8 @@ def commandBisect():
         restoreDict = OrderedDict()
         for repoName in syncDict:
             repoInfo = syncDict[repoName]
-            repoAbsPath = getAbsRepoPath(repoInfo["path"], cwd)
+            offset = _config['relativePathToRepositories']
+            repoAbsPath = os.path.join(syncRepoAbsPath, offset, repoInfo["path"])
             repoString = paddedRepoName(repoName, list(syncDict.keys()))
             try:
                 rev = getCurrentBranchOrHash(repoAbsPath)
@@ -623,7 +642,8 @@ def commandBisect():
         restoreDict = loadBisectRestoreFromJson(syncRepoAbsPath)
         for repoName in syncDict:
             repoInfo = syncDict[repoName]
-            repoAbsPath = getAbsRepoPath(repoInfo["path"], cwd)
+            offset = _config['relativePathToRepositories']
+            repoAbsPath = os.path.join(syncRepoAbsPath, offset, repoInfo["path"])
             repoString = paddedRepoName(repoName, list(syncDict.keys()))
             try:
                 rev = restoreDict[repoAbsPath] if (repoAbsPath in restoreDict) else None
@@ -653,7 +673,7 @@ def commandClone():
         sys.exit(1)
     destName = _config['args.name']
     destName = destName if (destName is not None) else getRepoNameFromUrl(cloneURL)
-    destNameAbsPath = getAbsRepoPath(destName, cwd)
+    destNameAbsPath = os.path.abspath(destName)
 
     execute3("mkdir -p {destNameAbsPath}")
     opts = {'captureStdOutStdErr':False, 'verbosity':verbosity, 'cwd': os.path.dirname(destNameAbsPath)}
@@ -678,7 +698,7 @@ def commandClone():
             printWithVars2(f"{_red('failure!') }: no syncfile found at {destNameAbsPath} or {syncRepoAbsPath}")
             sys.exit(1)
 
-    cwd = destNameAbsPath
+    _config['relativePathToRepositories'] = ".." #XXX needs work
     commandPopulate()
 
 
@@ -695,7 +715,8 @@ def commandPopulate():
     opts = {'captureStdOutStdErr':False, 'verbosity':verbosity}
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
-        repoAbsPath = getAbsRepoPath(repoInfo["path"], cwd)
+        offset = _config['relativePathToRepositories']
+        repoAbsPath = os.path.join(syncRepoAbsPath, offset, repoInfo["path"])
         repoString = paddedRepoName(repoName, list(syncDict.keys()))
         if not "cloneURL" in repoInfo:
             anyFailures = True
@@ -739,7 +760,8 @@ def commandStatus():
 
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
-        repoAbsPath = getAbsRepoPath(repoInfo["path"], cwd)
+        offset = _config['relativePathToRepositories']
+        repoAbsPath = os.path.join(syncRepoAbsPath, offset, repoInfo["path"])
         repoString = paddedRepoName(repoName, list(syncDict.keys()))
         if dryrun:
             printWithVars2(f"{repoString} : would give the status of the repo at {repoAbsPath}.", dryrun=False)
@@ -803,7 +825,8 @@ def distributeGitCommand():
     printWithVars2(gitRepoSeperatorString, dryrun=False)
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
-        repoAbsPath = getAbsRepoPath(repoInfo["path"], cwd)
+        offset = _config['relativePathToRepositories']
+        repoAbsPath = os.path.join(syncRepoAbsPath, offset, repoInfo["path"])
         if not checkForRepo(repoName, repoAbsPath):
             anyFailures = True
             continue
@@ -854,15 +877,29 @@ def dispatchCommand():
 # --------------------------------------------------------------------------------------------------------------------------
 
 def determinePaths(bankOptions):
-    #determine syncFileAbsPath and syncRepoAbsPath
+    """determine syncFileAbsPath and syncRepoAbsPath"""
     command = bankOptions['args.command']
+
     if command == 'clone' or command == 'create_syncrepo':
-        syncFileAbsPath = None
-        syncRepoAbsPath = None
-    else:
-        syncFileAbsPath = os.path.abspath(bankOptions['general.syncfile'])
-        syncRepoAbsPath = os.path.dirname(syncFileAbsPath)
+        return None, None
+    
+    syncFileAbsPath = os.path.abspath(bankOptions['general.syncfile'])
+    syncRepoAbsPath = os.path.dirname(syncFileAbsPath)
+
+    if command == 'create_syncfile':
+        return syncFileAbsPath, syncRepoAbsPath
+    
+    passedInName = getattr(bankOptions, 'args.syncfile', 'auto')
+    if (passedInName == 'auto') or (os.path.abspath(passedInName) != syncFileAbsPath):
+        path = os.path.join(syncRepoAbsPath, "*.json")
+        jsonFiles = glob.glob(path)
+        if not jsonFiles:
+            print(colored(f"failure! could not locate the syncfile in {syncRepoAbsPath}.", 'red'))
+            sys.exit(1)
+        syncFileAbsPath = jsonFiles[0]
+
     return syncFileAbsPath, syncRepoAbsPath
+
 
 
 def getResolvedOptions(args, remaining_args):
@@ -873,17 +910,13 @@ def getResolvedOptions(args, remaining_args):
         bankOptions = mergeOptionDicts(bankOptions, newOptions)
 
     # Get the config file path
-    if getattr(args, 'cwd', 'auto') != 'auto':
-        configFile = os.path.abspath(os.path.join(args.cwd, 'bankconfig.ini'))
-    else:
-        configFile = os.path.abspath('bankconfig.ini')
+    configFile = os.path.abspath('bankconfig.ini')
     if os.path.isfile(configFile):
         newOptions = flattenDict(getOptionDictFromIniFile(configFile))
         bankOptions = mergeOptionDicts(bankOptions, newOptions)
 
     passedInOptions = {
         'general' : {
-            'cwd' : getattr(args, 'cwd', 'auto'),
             'syncfile' : getattr(args, 'syncfile', 'auto'),
             'verbosity' : getattr(args, 'verbosity', autoNum),
             'colorize' :  getattr(args, 'colorize', 'auto'),
@@ -913,14 +946,13 @@ def getResolvedOptions(args, remaining_args):
 
 
 def main():
-    global syncFileAbsPath, syncRepoAbsPath, cwd, verbosity, dryrun, _config
+    global syncFileAbsPath, syncRepoAbsPath, verbosity, dryrun, _config
     args, remaining_args = parseArguments()
 
     _config = getResolvedOptions(args, remaining_args)
-    syncFileAbsPath, syncRepoAbsPath = determinePaths(bankOptions)
+    syncFileAbsPath, syncRepoAbsPath = determinePaths(_config)
 
-    cwd = _config['general.cwd']
-
+    _config['relativePathToRepositories'] = ".." # This is the path from the syncFile to the Repositories location
     verbosity = _config['general.verbosity']
     colorize = _config['general.colorize']
     dryrun = _config['args.dryrun']
