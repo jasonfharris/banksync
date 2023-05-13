@@ -16,7 +16,7 @@ A bank is a collection of repos defined in a *syncfile*. The syncfile typically 
 To quickly clone and populate the example collection of repos, use the following commands:
 
     cd ~
-    bank clone https://github.com/testbank/animalsRepoSync.git animals
+    bank clone https://github.com/testbank/animalsSyncRepo.git animals
 
 This will git clone the thin syncrepo, which contains the syncfile, and then populate all constituent repos. The resulting structure will be:
 
@@ -48,14 +48,14 @@ Let's break down the quick start process into steps.
 2. Clone the demonstration syncrepo for the animals project using standard git:
 
    ```
-   git clone https://github.com/testbank/animalsRepoSync.git
+   git clone https://github.com/testbank/animalsSyncRepo.git
    ```
 
    This clones the thin repo, which records the syncfile over time. It tracks the state of the repos in the bank at different times or stages. The resulting hierarchy is:
 
    ```
    animals
-   └── animalsRepoSync
+   └── animalsSyncRepo
        ├── bankconfig.ini
        └── syncfile.json
    ```
@@ -63,7 +63,7 @@ Let's break down the quick start process into steps.
 3. Populate the repositories in the bank:
 
    ```
-   cd animalsRepoSync
+   cd animalsSyncRepo
    bank populate
    ```
 
@@ -71,7 +71,7 @@ Let's break down the quick start process into steps.
 
    ```
    animals
-   ├── animalsRepoSync
+   ├── animalsSyncRepo
    │   ├── bankconfig.ini
    │   └── syncfile.json
    ├── repoBird
@@ -84,7 +84,7 @@ Let's break down the quick start process into steps.
 
 We can now issue commands across the repos in the bank. From the syncrepo we can execute:
 
-    cd ~/animals/animalsRepoSync
+    cd ~/animals/animalsSyncRepo
     bank git status
 
 Which will execute the status command in each of the repos in the bank. If we want to checkout a previous state across the repos in the project we can do this via (from the syncrepo):
@@ -102,7 +102,7 @@ Which will do a `git checkout master` on all the repos in the bank including the
 
 The syncfile specifies which repositories are part of the bank, and what state the repositories should be synchronized to. A typical simple sync file might be the following
 
-    more ~/animals/animalsRepoSync/syncfile.json
+    more ~/animals/animalsSyncRepo/syncfile.json
 
 Which yields:
 
@@ -141,7 +141,7 @@ So let us add some content to repoBird in our example and then commit this chang
 
 So now we can update the syncfile with the state of the current repos in the bank:
 
-    cd ~/animals/animalsRepoSync/
+    cd ~/animals/animalsSyncRepo/
     bank record_repos
 
 The contents of our syncfile will now be something like:
@@ -181,7 +181,7 @@ So we could now record this new overall state of the repos in the bank via simpl
 
 How does the bank command know where to put the `repoBird` and `repoFish`? How does it know which syncfile to use, etc. Well in the syncrepo there is the file `bankconfig.ini`. This is a standard preferences file but in this example it has two important options: `cwd=..` and `syncfile=syncfile.json`.
 
-The cwd (ChangeWorkingDirectory) option specifies that the repo commands should be executed one level up from our current working directory. So since we are currently at `~/animals/animalsRepoSync` that means that the repos paths will start from `~/animals/`
+The cwd (Change Working Directory) option indicates the relative path where repo commands should be executed. In this case, it is one level above our current working directory. Given that the syncfile is located in `~/animals/animalsSyncRepo`, this means that the repo paths will originate from `~/animals/`. For example, the path for "Birds" in the syncfile is simply `repoBird`. Relative to `animals/animalsSyncRepo`, and considering the `cwd` of `..`, we can determine the repo path for "birds". This is calculated as `animals/animalsSyncRepo` + `..` + `repoBird`, resulting in `animals/repoBird`, which is the storage location for the "Birds" repo.
 
 The second option just tells us what the name of the syncfile is. We could have called it `earthanimals.json` if we wanted to.
 
