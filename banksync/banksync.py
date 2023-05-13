@@ -115,13 +115,15 @@ All of the options, eg the --syncfile option, etc., can be specified in a standa
 `bankconfig.ini` so they do not need to be specified each time on the command line. If the bank command uses the config
 file than the bank command must be executed from the same directory which contains the bankconfig.ini file. ''')
 
-
+cmdHelp = {}
+cmdDescription = {}
+cmdEpilog = {}
 
 #  CMD: sync ----------
 
-syncCmdHelp = 'checkout / update the repos given in the syncfile to the states given in the syncfile'
-syncCmdDescription = syncCmdHelp
-syncCmdEpilog = wrapParagraphs('''Example usage:
+cmdHelp['sync'] = 'checkout / update the repos given in the syncfile to the states given in the syncfile'
+cmdDescription['sync'] = cmdHelp['sync']
+cmdEpilog ['sync']= wrapParagraphs('''Example usage:
 
   bank sync --syncfile syncfile.json
 
@@ -142,9 +144,9 @@ on each repo in the bank.
 
 #  CMD: record_repos ----------
 
-record_reposCmdHelp = 'alter the contents of the syncfile so that it matches the current revisions of the referenced repositories.'
-record_reposCmdDescription = record_reposCmdHelp
-record_reposCmdEpilog = wrapParagraphs('''Example usage:
+cmdHelp['record_repos'] = 'alter the contents of the syncfile so that it matches the current revisions of the referenced repositories.'
+cmdDescription['record_repos'] = cmdHelp['record_repos']
+cmdEpilog ['record_repos']= wrapParagraphs('''Example usage:
 
   bank record_repos --syncfile syncfile.json
 
@@ -154,9 +156,9 @@ This would alter the contents of syncfile.json so that it matches the current re
 
 #  CMD: create_syncfile ----------
 
-create_syncfileCmdHelp = 'create or overwrite the syncfile to contain the current sync states for the passed in repos.'
-create_syncfileCmdDescription = create_syncfileCmdHelp
-create_syncfileCmdEpilog = wrapParagraphs('''Example usage:
+cmdHelp['create_syncfile'] = 'create or overwrite the syncfile to contain the current sync states for the passed in repos.'
+cmdDescription['create_syncfile'] = cmdHelp['create_syncfile']
+cmdEpilog ['create_syncfile']= wrapParagraphs('''Example usage:
 
   bank create_syncfile --syncfile syncrepo/syncfile.json repo1 repo2 ... repoN
 
@@ -169,9 +171,9 @@ This would create or overwrite the syncfile.json to record the current states of
 
 #  CMD: create_syncrepo ----------
 
-create_syncrepoCmdHelp = 'create or overwrite the syncrepo to contain the current sync states for the passed in repos.'
-create_syncrepoCmdDescription = create_syncrepoCmdHelp
-create_syncrepoCmdEpilog = wrapParagraphs('''Example usage:
+cmdHelp['create_syncrepo'] = 'create or overwrite the syncrepo to contain the current sync states for the passed in repos.'
+cmdDescription['create_syncrepo'] = cmdHelp['create_syncrepo']
+cmdEpilog ['create_syncrepo']= wrapParagraphs('''Example usage:
 
   bank create_syncrepo repo1 repo2 ... repoN
 
@@ -198,9 +200,9 @@ This would create the syncrepo as the above command, but the repo would be calle
 
 #  CMD: clone ----------
 
-cloneCmdHelp = 'clone the repos specified in the syncfile'
-cloneCmdDescription = cloneCmdHelp
-cloneCmdEpilog = wrapParagraphs('''Example usage:
+cmdHelp['clone'] = 'clone the repos specified in the syncfile'
+cmdDescription['clone'] = cmdHelp['clone']
+cmdEpilog ['clone']= wrapParagraphs('''Example usage:
 
   bank clone https://github.com/myProject/syncrepo.git myProject
 
@@ -210,9 +212,9 @@ This would create the folder myProject and clone the syncrepo into myProject, an
 
 #  CMD: populate ----------
 
-populateCmdHelp = 'populate the repos specified in the syncfile'
-populateCmdDescription = populateCmdHelp
-populateCmdEpilog = wrapParagraphs('''Example usage:
+cmdHelp['populate'] = 'populate the repos specified in the syncfile'
+cmdDescription['populate'] = cmdHelp['populate']
+cmdEpilog ['populate']= wrapParagraphs('''Example usage:
 
   bank populate --syncfile syncfile.json
 
@@ -222,9 +224,9 @@ This would perform a git clone for each of the repositories specified in the syn
 
 #  CMD: status ----------
 
-statusCmdHelp = 'reports the status of the repos specified in the syncfile'
-statusCmdDescription = statusCmdHelp
-statusCmdEpilog = wrapParagraphs('''Example usage:
+cmdHelp['status'] = 'reports the status of the repos specified in the syncfile'
+cmdDescription['status'] = cmdHelp['status']
+cmdEpilog ['status']= wrapParagraphs('''Example usage:
 
   bank status --syncfile syncfile.json
 
@@ -233,9 +235,9 @@ This would report the status of each of the repositories specified in the syncfi
 
 #  CMD: bisect ----------
 
-bisectCmdHelp = 'bisect the syncrepo and sync all repos in the bank to the new state of the syncfile'
-bisectCmdDescription = bisectCmdHelp
-bisectCmdEpilog = wrapParagraphs('''Example usage:
+cmdHelp['bisect'] = 'bisect the syncrepo and sync all repos in the bank to the new state of the syncfile'
+cmdDescription['bisect'] = cmdHelp['bisect']
+cmdEpilog ['bisect']= wrapParagraphs('''Example usage:
 
   bank bisect --syncfile syncfile.json reset
 
@@ -245,9 +247,9 @@ This would pass the reset to the bisection of the sync-repo.
 
 #  CMD: git ----------
 
-gitCmdHelp = 'perform the given git command in each repo in the bank'
-gitCmdDescription = gitCmdHelp
-gitCmdEpilog = wrapParagraphs('''Example usage:
+cmdHelp['git'] = 'perform the given git command in each repo in the bank'
+cmdDescription['git'] = cmdHelp['git']
+cmdEpilog ['git']= wrapParagraphs('''Example usage:
 
   bank git status --syncfile syncfile.json
 
@@ -262,9 +264,9 @@ repos in the bank.
 
 #  CMD: gitall ----------
 
-gitallCmdHelp = 'perform the given git command in each repo in the bank and additionally in the syncrepo'
-gitallCmdDescription = gitallCmdHelp
-gitallCmdEpilog = wrapParagraphs('''
+cmdHelp['gitall'] = 'perform the given git command in each repo in the bank and additionally in the syncrepo'
+cmdDescription['gitall'] = cmdHelp['gitall']
+cmdEpilog ['gitall']= wrapParagraphs('''
 
 The common git commands which make sense have been "approved" are
 {approved_git_commands}. (Actually any git command can be used but so far only those common git
@@ -302,7 +304,7 @@ def parseArguments():
 
     subparsers = parser.add_subparsers(title='commands', dest='command', metavar = '')
     def addSubparser(name, parent_parsers=[pathOps_parser, commonOpts_parser]):
-        return subparsers.add_parser(name, help=eval(name+'CmdHelp'), description=eval(name+'CmdDescription'), epilog=eval(name+'CmdEpilog'), parents = parent_parsers, formatter_class=argparse.RawDescriptionHelpFormatter)
+        return subparsers.add_parser(name, help=cmdHelp.get(name, ""), description=cmdDescription.get(name, ""), epilog=cmdEpilog.get(name, ""), parents = parent_parsers, formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser_syncCmd = addSubparser('sync')
     parser_syncCmd.add_argument("--matching", metavar="MATCH", help=f'specify how we can recognize a revision "match": {matchingOptionValues}', choices=matchingOptionValues, default='auto')
