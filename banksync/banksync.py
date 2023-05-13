@@ -379,9 +379,9 @@ def commandSync():
 
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
-        absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
+        repoAbsPath = getAbsRepoPath(repoInfo["path"], cwd)
         repoString = paddedRepoName(repoName, list(syncDict.keys()))
-        if not checkForRepo(repoString, absRepoPath):
+        if not checkForRepo(repoString, repoAbsPath):
             allFound = False
             continue
 
@@ -398,9 +398,9 @@ def commandSync():
                     break
 
                 print(f"\r>> checking out {hash}...", end='', flush=True)
-                res = gitCommand("git checkout -B {defaultSyncPointBranchName} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
+                res = gitCommand("git checkout -B {defaultSyncPointBranchName} {hash}", 3, cwd=repoAbsPath, verbosity=verbosity)
                 if res["code"] == 0:
-                    revNum = getRevNumber(absRepoPath)
+                    revNum = getRevNumber(repoAbsPath)
                     printWithVars2(f"\r{_green(repoString)}: successfully checked out revision by {method}: {shortHash} (revision number {revNum})")
                     found = True
                     break
@@ -414,7 +414,7 @@ def commandSync():
                         printWithVars2(f"{repoString}: would try and check out revision by {method}: {ts} ({date})", dryrun=False)
                         break
 
-                    res = gitCommand("git log --all --format=format:'\"%at\" : \"%H\",'", 4, cwd=absRepoPath, raiseOnFailure=True, verbosity=verbosity, permitShowingStdOut=False, permitShowingStdErr=False)
+                    res = gitCommand("git log --all --format=format:'\"%at\" : \"%H\",'", 4, cwd=repoAbsPath, raiseOnFailure=True, verbosity=verbosity, permitShowingStdOut=False, permitShowingStdErr=False)
                     shaHash = 0
                     if res["code"] == 0:
                         timestampsToShas = json.loads('{'+res["stdout"][0:-1]+'}')
@@ -423,9 +423,9 @@ def commandSync():
                                 hash = timestampsToShas[ts]
                                 branch=defaultSyncPointBranchName
                                 print(f"\r>> checking out {ts} ({date})...", end='', flush=True)
-                                res = gitCommand(f"git checkout -B {branch} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
+                                res = gitCommand(f"git checkout -B {branch} {hash}", 3, cwd=repoAbsPath, verbosity=verbosity)
                                 if res["code"] == 0:
-                                    revNum = getRevNumber(absRepoPath)
+                                    revNum = getRevNumber(repoAbsPath)
                                     printWithVars2(f"{_green(repoString)}: successfully checked out revision by {method}: {ts} ({date}) {hash} (revision number {revNum})")
                                     found = True
                                     break
@@ -436,9 +436,9 @@ def commandSync():
                                 hash = timestampsToShas[closestTimestamp]
                                 branch=defaultSyncPointBranchName
                                 print(f"\r>> checking out close {ts} ({date})...", end='', flush=True)
-                                res = gitCommand("git checkout -B {branch} {hash}", 3, cwd=absRepoPath, verbosity=verbosity)
+                                res = gitCommand("git checkout -B {branch} {hash}", 3, cwd=repoAbsPath, verbosity=verbosity)
                                 if res["code"] == 0:
-                                    revNum = getRevNumber(absRepoPath)
+                                    revNum = getRevNumber(repoAbsPath)
                                     printWithVars2(f"\r{_yellow(repoString)}: warning checking out revision by closest timestamp.", "red")
                                     printWithVars2(f"       requested {method}: {ts} ({date})")
                                     printWithVars2(f"       used      {method}: {closestTimestamp} ({closestDate}) {hash} (revision number {revNum})")
@@ -471,9 +471,9 @@ def commandRecordRepos():
     anyFailures = False
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
-        absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
+        repoAbsPath = getAbsRepoPath(repoInfo["path"], cwd)
         repoString = paddedRepoName(repoName, list(syncDict.keys()))
-        if not checkForRepo(repoString, absRepoPath):
+        if not checkForRepo(repoString, repoAbsPath):
             anyFailures = True
             continue
         (worked, newRepoInfo) = dictFromCurrentRepoState(repoInfo["path"], cwd=cwd, verbosity=verbosity, dryrun=False)
@@ -482,7 +482,7 @@ def commandRecordRepos():
             date = newRepoInfo["date"]
             printWithVars2(f"{_green(repoString)}: recording bank sync state of {shortHash}, {date}.")
         else:
-            printWithVars2(f"{_red(repoString)}: failure! not able to get the status of {repoName} at {absRepoPath}", 'red')
+            printWithVars2(f"{_red(repoString)}: failure! not able to get the status of {repoName} at {repoAbsPath}", 'red')
             anyFailures = True
         newSyncDict[repoName] = newRepoInfo
 
@@ -509,10 +509,10 @@ def commandCreateSyncfile():
     newSyncDict = OrderedDict()
     anyFailures = False
     for repo in repoNames:
-        absRepoPath = getAbsRepoPath(repo, cwd)
-        repoName = os.path.basename(absRepoPath)
+        repoAbsPath = getAbsRepoPath(repo, cwd)
+        repoName = os.path.basename(repoAbsPath)
         repoString = paddedRepoName(repoName, repoNames)
-        if not checkForRepo(repoName, absRepoPath):
+        if not checkForRepo(repoName, repoAbsPath):
             anyFailures = True
             continue
         (worked, newRepoInfo) = dictFromCurrentRepoState(repo, cwd=cwd, verbosity=verbosity, dryrun=False)
@@ -521,7 +521,7 @@ def commandCreateSyncfile():
             date = newRepoInfo["date"]
             printWithVars2(f"{_green(repoString)}: recording repository state of {shortHash}, {date}.")
         else:
-            printWithVars2(f"failure! not able to get the status of {repoName} at {absRepoPath}", 'red')
+            printWithVars2(f"failure! not able to get the status of {repoName} at {repoAbsPath}", 'red')
             anyFailures = True
         newSyncDict[repoName] = newRepoInfo
 
@@ -588,15 +588,15 @@ def commandBisect():
         restoreDict = OrderedDict()
         for repoName in syncDict:
             repoInfo = syncDict[repoName]
-            absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
+            repoAbsPath = getAbsRepoPath(repoInfo["path"], cwd)
             repoString = paddedRepoName(repoName, list(syncDict.keys()))
             try:
-                rev = getCurrentBranchOrHash(absRepoPath)
-                restoreDict[absRepoPath] = rev
+                rev = getCurrentBranchOrHash(repoAbsPath)
+                restoreDict[repoAbsPath] = rev
                 printWithVars2(f"{_green(repoString)}: recording repository state of '{rev}' before starting bisect")
             except:
                 anyFailures = True
-                printWithVars2(f"{_red(repoString)}: error recoding original branch in {absRepoPath}")
+                printWithVars2(f"{_red(repoString)}: error recoding original branch in {repoAbsPath}")
                 continue
         writeBisectRestoreToJson(syncRepoPath, restoreDict)
         if anyFailures:
@@ -612,17 +612,17 @@ def commandBisect():
         restoreDict = loadBisectRestoreFromJson(syncRepoPath)
         for repoName in syncDict:
             repoInfo = syncDict[repoName]
-            absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
+            repoAbsPath = getAbsRepoPath(repoInfo["path"], cwd)
             repoString = paddedRepoName(repoName, list(syncDict.keys()))
             try:
-                rev = restoreDict[absRepoPath] if (absRepoPath in restoreDict) else None
+                rev = restoreDict[repoAbsPath] if (repoAbsPath in restoreDict) else None
                 if not rev:
                     raise Exception("Restore changesete not found")
-                res = gitCommand("git checkout {rev}", 3, cwd=absRepoPath, verbosity=verbosity)
+                res = gitCommand("git checkout {rev}", 3, cwd=repoAbsPath, verbosity=verbosity)
                 printWithVars2(f"{_green(repoString)}: restoring repository state to '{rev}' after finishing bisect")
             except:
                 anyFailures = True
-                printWithVars2(f"{_red(repoString)}: error restoring original branch in {absRepoPath}")
+                printWithVars2(f"{_red(repoString)}: error restoring original branch in {repoAbsPath}")
                 continue
         if anyFailures:
             print(colored("failure! not all repo states restored after bisect.", 'red'))
@@ -642,32 +642,32 @@ def commandClone():
         sys.exit(1)
     destName = _config['args.name']
     destName = destName if (destName is not None) else getRepoNameFromUrl(cloneURL)
-    absDestNamePath = getAbsRepoPath(destName, cwd)
+    destNameAbsPath = getAbsRepoPath(destName, cwd)
 
-    execute3("mkdir -p {absDestNamePath}")
-    opts = {'captureStdOutStdErr':False, 'verbosity':verbosity, 'cwd': os.path.dirname(absDestNamePath)}
+    execute3("mkdir -p {destNameAbsPath}")
+    opts = {'captureStdOutStdErr':False, 'verbosity':verbosity, 'cwd': os.path.dirname(destNameAbsPath)}
     print(f"\r>> cloning {cloneURL}...", end='', flush=True)
     res = gitCommand("git clone {cloneURL} {destName}", 3, **opts)
     if res['code'] != 0:
         anyFailures = True
-        printWithVars2(f"\r{_red(cloneURL)}: error cloning repo to {absDestNamePath}: {res['stderr']}")
+        printWithVars2(f"\r{_red(cloneURL)}: error cloning repo to {destNameAbsPath}: {res['stderr']}")
         sys.exit(1)
 
-    printWithVars2(f"\r{_green(cloneURL)}: cloned repo to {absDestNamePath}")
+    printWithVars2(f"\r{_green(cloneURL)}: cloned repo to {destNameAbsPath}")
 
-    syncRepoPath = os.path.join(absDestNamePath, 'syncrepo')
+    syncRepoPath = os.path.join(destNameAbsPath, 'syncrepo')
 
     # If we have just cloned a sync repo (the typical case) then move the contents into the sync repo directory
-    if getSyncFileInDir(absDestNamePath):
-        moveDirectory(absDestNamePath, syncRepoPath)
+    if getSyncFileInDir(destNameAbsPath):
+        moveDirectory(destNameAbsPath, syncRepoPath)
 
     syncFilePath = getSyncFileInDir(syncRepoPath)
     if not syncFilePath:
             anyFailures = True
-            printWithVars2(f"{_red('failure!') }: no syncfile found at {absDestNamePath} or {syncRepoPath}")
+            printWithVars2(f"{_red('failure!') }: no syncfile found at {destNameAbsPath} or {syncRepoPath}")
             sys.exit(1)
 
-    cwd = absDestNamePath
+    cwd = destNameAbsPath
     commandPopulate()
 
 
@@ -684,17 +684,17 @@ def commandPopulate():
     opts = {'captureStdOutStdErr':False, 'verbosity':verbosity}
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
-        absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
+        repoAbsPath = getAbsRepoPath(repoInfo["path"], cwd)
         repoString = paddedRepoName(repoName, list(syncDict.keys()))
         if not "cloneURL" in repoInfo:
             anyFailures = True
             printWithVars2(f"{repoString}: there is no cloneURL for this repo", "red")
             continue
         cloneURL = repoInfo["cloneURL"]
-        name = os.path.basename(absRepoPath)
-        dir  = os.path.dirname(absRepoPath)
+        name = os.path.basename(repoAbsPath)
+        dir  = os.path.dirname(repoAbsPath)
         if dryrun:
-            printWithVars2(f"{repoString}: would clone {cloneURL} to {absRepoPath}.", dryrun=False)
+            printWithVars2(f"{repoString}: would clone {cloneURL} to {repoAbsPath}.", dryrun=False)
             continue
 
         opts['cwd'] = dir
@@ -702,10 +702,10 @@ def commandPopulate():
         print(f"\r>> cloning {name}...", end='', flush=True)
         res = gitCommand("git clone {cloneURL} {name}", 3, **opts)
         if res['code'] == 0:
-            printWithVars2(f"\r{_green(repoString)}: cloned repo to {absRepoPath}")
+            printWithVars2(f"\r{_green(repoString)}: cloned repo to {repoAbsPath}")
         else:
             anyFailures = True
-            printWithVars2(f"\r{_red(repoString)}: error cloning repo to {absRepoPath}")
+            printWithVars2(f"\r{_red(repoString)}: error cloning repo to {repoAbsPath}")
 
     if dryrun:
         sys.exit(0)
@@ -728,20 +728,20 @@ def commandStatus():
 
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
-        absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
+        repoAbsPath = getAbsRepoPath(repoInfo["path"], cwd)
         repoString = paddedRepoName(repoName, list(syncDict.keys()))
         if dryrun:
-            printWithVars2(f"{repoString} : would give the status of the repo at {absRepoPath}.", dryrun=False)
+            printWithVars2(f"{repoString} : would give the status of the repo at {repoAbsPath}.", dryrun=False)
             continue
 
-        if not checkForRepo(repoString, absRepoPath):
+        if not checkForRepo(repoString, repoAbsPath):
             allFound = False
             anyFailures = True
             continue
 
-        modifiedCount = getModifiedCount(absRepoPath)
-        stagedCount = getStagedCount(absRepoPath)
-        branchName = getBranchName(absRepoPath)
+        modifiedCount = getModifiedCount(repoAbsPath)
+        stagedCount = getStagedCount(repoAbsPath)
+        branchName = getBranchName(repoAbsPath)
 
         # This is actually dimmed not grey since grey appears like black text for me
         def greyText(txt):
@@ -792,11 +792,11 @@ def distributeGitCommand():
     printWithVars2(gitRepoSeperatorString, dryrun=False)
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
-        absRepoPath = getAbsRepoPath(repoInfo["path"], cwd)
-        if not checkForRepo(repoName, absRepoPath):
+        repoAbsPath = getAbsRepoPath(repoInfo["path"], cwd)
+        if not checkForRepo(repoName, repoAbsPath):
             anyFailures = True
             continue
-        opts['cwd'] = absRepoPath
+        opts['cwd'] = repoAbsPath
         gitCommand(gitCmd, 2, **opts);
         printWithVars2(gitRepoSeperatorString, dryrun=False)
     if includeSyncRepo:

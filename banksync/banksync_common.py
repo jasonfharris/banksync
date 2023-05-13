@@ -120,40 +120,40 @@ def paddedRepoName(repoName, names):
         maxRepoNameLength = max(maxRepoNameLength, len(name))
     return repoName.ljust(maxRepoNameLength)
 
-def checkForRepo(repoString, absRepoPath):
-    if not os.path.isdir(absRepoPath):
-        printWithVars1(f"{repoString} : there is no repository at {absRepoPath}.", 'red')
+def checkForRepo(repoString, repoAbsPath):
+    if not os.path.isdir(repoAbsPath):
+        printWithVars1(f"{repoString} : there is no repository at {repoAbsPath}.", 'red')
         return False
-    if not os.path.isdir(os.path.join(absRepoPath,".git")):
-        printWithVars1(f"{repoString} : {absRepoPath} is not a git repository.", 'red')
+    if not os.path.isdir(os.path.join(repoAbsPath,".git")):
+        printWithVars1(f"{repoString} : {repoAbsPath} is not a git repository.", 'red')
         return False
     return True
 
 def checkForSyncRepoFile(syncFilePath):
     if not os.path.isfile(syncFilePath):
-        absSyncFilePath = os.path.abspath(syncFilePath)
-        printWithVars1(f"failure! could not locate the sync file at {absSyncFilePath}.", 'red')
+        syncFileAbsPath = os.path.abspath(syncFilePath)
+        printWithVars1(f"failure! could not locate the sync file at {syncFileAbsPath}.", 'red')
         sys.exit(1)
 
 def checkForSyncRepoDir(syncRepoPath, existing = True):
-    absSyncRepoPath = os.path.abspath(syncRepoPath)
+    syncRepoAbsPath = os.path.abspath(syncRepoPath)
 
-    if not os.path.isdir(absSyncRepoPath):
-        printWithVars1(f"failure! could not locate the syncrepo dir at {absSyncRepoPath}.", 'red')
+    if not os.path.isdir(syncRepoAbsPath):
+        printWithVars1(f"failure! could not locate the syncrepo dir at {syncRepoAbsPath}.", 'red')
         sys.exit(1)
 
-    if not os.path.isdir(os.path.join(absSyncRepoPath,".git")):
+    if not os.path.isdir(os.path.join(syncRepoAbsPath,".git")):
         if existing:
-            printWithVars1(f"failure! {absSyncRepoPath} is not a git repository consisting of syncfile revisions.", 'red')
+            printWithVars1(f"failure! {syncRepoAbsPath} is not a git repository consisting of syncfile revisions.", 'red')
         else:
-            printWithVars1(f"failure! {absSyncRepoPath} is not a git repository.", 'red')
+            printWithVars1(f"failure! {syncRepoAbsPath} is not a git repository.", 'red')
         sys.exit(1)
 
 def checkForSyncRepo(syncFilePath):
-    absSyncFilePath = os.path.abspath(syncFilePath)
-    absSyncRepoPath = os.path.dirname(absSyncFilePath)
-    checkForSyncRepoFile(absSyncFilePath)
-    checkForSyncRepoDir(absSyncRepoPath)
+    syncFileAbsPath = os.path.abspath(syncFilePath)
+    syncRepoAbsPath = os.path.dirname(syncFileAbsPath)
+    checkForSyncRepoFile(syncFileAbsPath)
+    checkForSyncRepoDir(syncRepoAbsPath)
 
 
 
@@ -179,38 +179,38 @@ def gitCommand(cmdStr, verbosityThreshold=3, **kwargs):
         raise Exception(f"Bad git result {res}")
     return res
 
-def getRevNumber(absRepoPath):
+def getRevNumber(repoAbsPath):
     """Return the revision number of the repository at the given path."""
-    res = gitCommand("git rev-list HEAD --count --first-parent", 4, cwd=absRepoPath)
+    res = gitCommand("git rev-list HEAD --count --first-parent", 4, cwd=repoAbsPath)
     try:
         num = int(res["stdout"].strip())
         return str(num)
     except:
         return "(unknown)"
 
-def getCurrentRevHash(absRepoPath):
+def getCurrentRevHash(repoAbsPath):
     """Return the current revision hash of the repository at the given path."""
-    res = gitCommand("git log HEAD -n 1 --date=iso --format=format:'%H'", 4, cwd=absRepoPath, verbosity=1)
+    res = gitCommand("git log HEAD -n 1 --date=iso --format=format:'%H'", 4, cwd=repoAbsPath, verbosity=1)
     if isSha1Str(res['stdout']):
         return res['stdout']
     return '0'*40
 
-def getBranchName(absRepoPath):
+def getBranchName(repoAbsPath):
     """Return the current branch name of the repository at the given path."""
-    res = gitCommand("git rev-parse --abbrev-ref HEAD", 4, cwd=absRepoPath, verbosity=1)
+    res = gitCommand("git rev-parse --abbrev-ref HEAD", 4, cwd=repoAbsPath, verbosity=1)
     return res['stdout'].strip()
 
-def getModifiedCount(absRepoPath):
+def getModifiedCount(repoAbsPath):
     """Return the count of modified files in the repository at the given path."""
-    res = gitCommand("git ls-files --modified --exclude-standard --directory", 4, cwd=absRepoPath, verbosity=1)
+    res = gitCommand("git ls-files --modified --exclude-standard --directory", 4, cwd=repoAbsPath, verbosity=1)
     ans = res['stdout'].strip()
     if not ans:
         return 0
     return len(ans.split('\n'))
 
-def getStagedCount(absRepoPath):
+def getStagedCount(repoAbsPath):
     """Return the count of staged files in the repository at the given path."""
-    res = gitCommand("git diff --name-only --cached", 4, cwd=absRepoPath, verbosity=1)
+    res = gitCommand("git diff --name-only --cached", 4, cwd=repoAbsPath, verbosity=1)
     ans = res['stdout'].strip()
     if not ans:
         return 0
@@ -295,13 +295,13 @@ def getSyncFileInDir(srcDir):
 # Given the current branch is say "bobby" then return "bobby", or else if we are in a detached head
 # state then return something like "39b2f210afb38cb43dc6387cb7096ad4aa70cc3a"
 
-def getCurrentBranchOrHash(absRepoPath):
+def getCurrentBranchOrHash(repoAbsPath):
     try:
-        res = gitCommand("git branch", 3, cwd=absRepoPath, verbosity=1, ignoreErrors=False)
+        res = gitCommand("git branch", 3, cwd=repoAbsPath, verbosity=1, ignoreErrors=False)
         restore = None
         m = re.search(r'^\* \(HEAD detached at.*', res["stdout"], re.MULTILINE)
         if m:
-            return getCurrentRevHash(absRepoPath)
+            return getCurrentRevHash(repoAbsPath)
         m = re.search(r'^\* (.*)$', res["stdout"], re.MULTILINE)
         if m:
             return m.group(1)
@@ -317,33 +317,33 @@ def getCurrentBranchOrHash(absRepoPath):
 
 def writeBisectRestoreToJson(syncRepoPath, restoreDict):
     newFileContents = json.dumps(restoreDict, indent=4)
-    absSyncRepoPath = os.path.abspath(syncRepoPath)
-    absBisectRestorePath = os.path.join(absSyncRepoPath, '.bisectRestore')
-    with open(absBisectRestorePath, 'w') as f:
+    syncRepoAbsPath = os.path.abspath(syncRepoPath)
+    bisectRestoreAbsPath = os.path.join(syncRepoAbsPath, '.bisectRestore')
+    with open(bisectRestoreAbsPath, 'w') as f:
         f.write(newFileContents)
 
 def loadBisectRestoreFromJson(syncRepoPath):
     checkForSyncRepoDir(syncRepoPath)
-    absSyncRepoPath = os.path.abspath(syncRepoPath)
-    absBisectRestorePath = os.path.join(absSyncRepoPath, '.bisectRestore')
-    with open(absBisectRestorePath) as f:
+    syncRepoAbsPath = os.path.abspath(syncRepoPath)
+    bisectRestoreAbsPath = os.path.join(syncRepoAbsPath, '.bisectRestore')
+    with open(bisectRestoreAbsPath) as f:
         jsonTxt = f.read()
         restoreDict = json.loads(jsonTxt, object_pairs_hook=OrderedDict)
         return restoreDict if restoreDict else OrderedDict()
 
 def removeBisectRestoreFile(syncRepoPath):
-    absSyncRepoPath = os.path.abspath(syncRepoPath)
-    absBisectRestorePath = os.path.join(absSyncRepoPath, '.bisectRestore')
-    os.remove(absBisectRestorePath)
+    syncRepoAbsPath = os.path.abspath(syncRepoPath)
+    bisectRestoreAbsPath = os.path.join(syncRepoAbsPath, '.bisectRestore')
+    os.remove(bisectRestoreAbsPath)
 
 def loadSyncFileAsDict(syncFilePath):
-    absSyncFilePath = os.path.abspath(syncFilePath)
-    checkForSyncRepo(absSyncFilePath)
-    with open(absSyncFilePath) as f:
+    syncFileAbsPath = os.path.abspath(syncFilePath)
+    checkForSyncRepo(syncFileAbsPath)
+    with open(syncFileAbsPath) as f:
         jsonTxt = f.read()
         syncDict = json.loads(jsonTxt, object_pairs_hook=OrderedDict)
         if not syncDict:
-            printWithVars1(f"failure! no repos where specified in the sync file at {absSyncFilePath}.", 'red')
+            printWithVars1(f"failure! no repos where specified in the sync file at {syncFileAbsPath}.", 'red')
             sys.exit(1)
         return syncDict
 
@@ -357,8 +357,8 @@ def writeDictToSyncFile(syncFilePath, dict):
 
 def dictFromCurrentRepoState(path, **kwargs):
     opts = merge({'cwd':".", 'verbosity': 3, 'raiseOnFailure': True}, kwargs)
-    absRepoPath = getAbsRepoPath(path, opts['cwd'])
-    opts['cwd'] = absRepoPath
+    repoAbsPath = getAbsRepoPath(path, opts['cwd'])
+    opts['cwd'] = repoAbsPath
     newRepoInfo = OrderedDict()
     newRepoInfo["path"] = path
     succeeded = True
