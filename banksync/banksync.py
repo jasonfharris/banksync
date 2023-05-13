@@ -848,7 +848,7 @@ def dispatchCommand():
 # Extract and clean the argument parameters
 # --------------------------------------------------------------------------------------------------------------------------
 
-def getResolvedOptions(args):
+def getResolvedOptions(args, remaining_args):
 
     bankOptions = flattenDict(dict(defaultOptions))
     if os.path.isfile('~/.bankconfigrc'):
@@ -887,6 +887,11 @@ def getResolvedOptions(args):
     bankOptions['general.verbosity'] = int(bankOptions['general.verbosity'])
     bankOptions['general.colorize'] = True if (bankOptions['general.colorize'].lower() in ['yes','true']) else False
 
+    argsOptions = flattenDict({'args' : vars(args)})
+    bankOptions['args'] = vars(args)
+    bankOptions['remaining_args'] = remaining_args
+    bankOptions = flattenDict(bankOptions)
+    
     return bankOptions
 
 
@@ -894,10 +899,7 @@ def main():
     global syncFileAbsPath, syncRepoAbsPath, cwd, verbosity, dryrun, _config
     args, remaining_args = parseArguments()
 
-    _config = getResolvedOptions(args)
-    _config['args'] = vars(args)
-    _config['remaining_args'] = remaining_args
-    _config = flattenDict(_config)
+    _config = getResolvedOptions(args, remaining_args)
 
     cwd = _config['general.cwd']
     verbosity = _config['general.verbosity']
