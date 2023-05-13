@@ -129,9 +129,8 @@ def checkForRepo(repoString, repoAbsPath):
         return False
     return True
 
-def checkForSyncRepoFile(syncFilePath):
-    if not os.path.isfile(syncFilePath):
-        syncFileAbsPath = os.path.abspath(syncFilePath)
+def checkForSyncRepoFile(syncFileAbsPath):
+    if not os.path.isfile(syncFileAbsPath):
         printWithVars1(f"failure! could not locate the sync file at {syncFileAbsPath}.", 'red')
         sys.exit(1)
 
@@ -149,8 +148,7 @@ def checkForSyncRepoDir(syncRepoAbsPath, existing = True):
             printWithVars1(f"failure! {syncRepoAbsPath} is not a git repository.", 'red')
         sys.exit(1)
 
-def checkForSyncRepo(syncFilePath):
-    syncFileAbsPath = os.path.abspath(syncFilePath)
+def checkForSyncRepo(syncFileAbsPath):
     syncRepoAbsPath = os.path.dirname(syncFileAbsPath)
     checkForSyncRepoFile(syncFileAbsPath)
     checkForSyncRepoDir(syncRepoAbsPath)
