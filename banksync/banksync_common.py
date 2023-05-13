@@ -135,8 +135,8 @@ def checkForSyncRepoFile(syncFilePath):
         printWithVars1(f"failure! could not locate the sync file at {syncFileAbsPath}.", 'red')
         sys.exit(1)
 
-def checkForSyncRepoDir(syncRepoPath, existing = True):
-    syncRepoAbsPath = os.path.abspath(syncRepoPath)
+def checkForSyncRepoDir(syncRepoAbsPath, existing = True):
+    syncRepoAbsPath = os.path.abspath(syncRepoAbsPath)
 
     if not os.path.isdir(syncRepoAbsPath):
         printWithVars1(f"failure! could not locate the syncrepo dir at {syncRepoAbsPath}.", 'red')
@@ -315,24 +315,21 @@ def getCurrentBranchOrHash(repoAbsPath):
 # Dictionary Operations
 # --------------------------------------------------------------------------------------------------------------------------
 
-def writeBisectRestoreToJson(syncRepoPath, restoreDict):
+def writeBisectRestoreToJson(syncRepoAbsPath, restoreDict):
     newFileContents = json.dumps(restoreDict, indent=4)
-    syncRepoAbsPath = os.path.abspath(syncRepoPath)
     bisectRestoreAbsPath = os.path.join(syncRepoAbsPath, '.bisectRestore')
     with open(bisectRestoreAbsPath, 'w') as f:
         f.write(newFileContents)
 
-def loadBisectRestoreFromJson(syncRepoPath):
-    checkForSyncRepoDir(syncRepoPath)
-    syncRepoAbsPath = os.path.abspath(syncRepoPath)
+def loadBisectRestoreFromJson(syncRepoAbsPath):
+    checkForSyncRepoDir(syncRepoAbsPath)
     bisectRestoreAbsPath = os.path.join(syncRepoAbsPath, '.bisectRestore')
     with open(bisectRestoreAbsPath) as f:
         jsonTxt = f.read()
         restoreDict = json.loads(jsonTxt, object_pairs_hook=OrderedDict)
         return restoreDict if restoreDict else OrderedDict()
 
-def removeBisectRestoreFile(syncRepoPath):
-    syncRepoAbsPath = os.path.abspath(syncRepoPath)
+def removeBisectRestoreFile(syncRepoAbsPath):
     bisectRestoreAbsPath = os.path.join(syncRepoAbsPath, '.bisectRestore')
     os.remove(bisectRestoreAbsPath)
 

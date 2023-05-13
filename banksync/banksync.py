@@ -505,7 +505,7 @@ def commandRecordRepos():
 
 def commandCreateSyncfile():
     repoNames = _config['args.repos']
-    checkForSyncRepoDir(syncRepoPath, existing = False)
+    checkForSyncRepoDir(syncRepoAbsPath, existing = False)
     newSyncDict = OrderedDict()
     anyFailures = False
     for repo in repoNames:
@@ -544,25 +544,25 @@ def commandCreateSyncfile():
 
 def commandCreateSyncrepo():
     global syncFilePath
-    global syncRepoPath
+    global syncRepoAbsPath
     syncfilename = _config['create_syncrepo.syncfilename']
     syncreponame = _config['create_syncrepo.syncreponame']
-    syncRepoPath = os.path.abspath(syncreponame)
-    syncFilePath = os.path.join(syncRepoPath, syncfilename)
-    configFilePath = os.path.join(syncRepoPath, 'bankconfig.ini')
+    syncRepoAbsPath = os.path.abspath(syncreponame)
+    syncFilePath = os.path.join(syncRepoAbsPath, syncfilename)
+    configFilePath = os.path.join(syncRepoAbsPath, 'bankconfig.ini')
 
-    if os.path.isdir(syncRepoPath):
-        printWithVars1(f"failure! The directory {syncRepoPath} already exists.", 'red')
+    if os.path.isdir(syncRepoAbsPath):
+        printWithVars1(f"failure! The directory {syncRepoAbsPath} already exists.", 'red')
         sys.exit(1)
 
     if dryrun:
-        printWithVars1(f"The directory {syncRepoPath} would be created and a git repository would be initilized there. The file {configFilePath} and {syncFilePath} would be created and filled.")
+        printWithVars1(f"The directory {syncRepoAbsPath} would be created and a git repository would be initilized there. The file {configFilePath} and {syncFilePath} would be created and filled.")
         sys.exit(0)
 
-    os.makedirs(syncRepoPath)
+    os.makedirs(syncRepoAbsPath)
     with open(configFilePath, 'w') as f:
         f.write(f"[general]\ncwd=..\nsyncFile={syncfilename}")
-    execute2("git init", cwd=syncRepoPath)
+    execute2("git init", cwd=syncRepoAbsPath)
 
     commandCreateSyncfile()
 
@@ -577,7 +577,7 @@ def commandBisect():
     remainingArgs = _config['remaining_args']
     checkForSyncRepo(syncFilePath)
     syncDict = loadSyncFileAsDict(syncFilePath)
-    currentRev = getCurrentRevHash(syncRepoPath)
+    currentRev = getCurrentRevHash(syncRepoAbsPath)
     anyFailures = False
 
     if dryrun:
@@ -598,18 +598,18 @@ def commandBisect():
                 anyFailures = True
                 printWithVars2(f"{_red(repoString)}: error recoding original branch in {repoAbsPath}")
                 continue
-        writeBisectRestoreToJson(syncRepoPath, restoreDict)
+        writeBisectRestoreToJson(syncRepoAbsPath, restoreDict)
         if anyFailures:
             print(colored("failure! not all repo states recorded before bisect.", 'red'))
 
     bisectCmd = "git bisect " + command + " " + " ".join(remainingArgs)
-    res = gitCommand(bisectCmd, 2, cwd=syncRepoPath, verbosity=verbosity);
-    newRev = getCurrentRevHash(syncRepoPath)
+    res = gitCommand(bisectCmd, 2, cwd=syncRepoAbsPath, verbosity=verbosity);
+    newRev = getCurrentRevHash(syncRepoAbsPath)
     if newRev != currentRev:
         commandSync()
 
     if command == 'reset':
-        restoreDict = loadBisectRestoreFromJson(syncRepoPath)
+        restoreDict = loadBisectRestoreFromJson(syncRepoAbsPath)
         for repoName in syncDict:
             repoInfo = syncDict[repoName]
             repoAbsPath = getAbsRepoPath(repoInfo["path"], cwd)
@@ -626,7 +626,7 @@ def commandBisect():
                 continue
         if anyFailures:
             print(colored("failure! not all repo states restored after bisect.", 'red'))
-        removeBisectRestoreFile(syncRepoPath)
+        removeBisectRestoreFile(syncRepoAbsPath)
 
 
 
@@ -635,7 +635,7 @@ def commandBisect():
 # --------------------------------------------------------------------------------------------------------------------------
 
 def commandClone():
-    global syncFilePath, syncRepoPath, cwd
+    global syncFilePath, syncRepoAbsPath, cwd
     cloneURL = _config['args.url']
     if not isValidGitUrl(cloneURL):
         print(colored("failure! {cloneURL} appears not to be a URL that works with git clone.", 'red'))
@@ -655,16 +655,16 @@ def commandClone():
 
     printWithVars2(f"\r{_green(cloneURL)}: cloned repo to {destNameAbsPath}")
 
-    syncRepoPath = os.path.join(destNameAbsPath, 'syncrepo')
+    syncRepoAbsPath = os.path.join(destNameAbsPath, 'syncrepo')
 
     # If we have just cloned a sync repo (the typical case) then move the contents into the sync repo directory
     if getSyncFileInDir(destNameAbsPath):
-        moveDirectory(destNameAbsPath, syncRepoPath)
+        moveDirectory(destNameAbsPath, syncRepoAbsPath)
 
-    syncFilePath = getSyncFileInDir(syncRepoPath)
+    syncFilePath = getSyncFileInDir(syncRepoAbsPath)
     if not syncFilePath:
             anyFailures = True
-            printWithVars2(f"{_red('failure!') }: no syncfile found at {destNameAbsPath} or {syncRepoPath}")
+            printWithVars2(f"{_red('failure!') }: no syncfile found at {destNameAbsPath} or {syncRepoAbsPath}")
             sys.exit(1)
 
     cwd = destNameAbsPath
@@ -785,7 +785,7 @@ def distributeGitCommand():
     gitCmd = "git " + command + " " + " ".join(remainingArgs)
     gitCmd = gitCmd.strip()
     gitRepoSeperatorString = (_config['general.seperator']*40)[0:40]
-    checkForSyncRepoDir(syncRepoPath)
+    checkForSyncRepoDir(syncRepoAbsPath)
     syncDict = loadSyncFileAsDict(syncFilePath)
     anyFailures = False
     opts = {'captureStdOutStdErr':False, 'verbosity':verbosity}
@@ -800,7 +800,7 @@ def distributeGitCommand():
         gitCommand(gitCmd, 2, **opts);
         printWithVars2(gitRepoSeperatorString, dryrun=False)
     if includeSyncRepo:
-        opts['cwd'] = syncRepoPath
+        opts['cwd'] = syncRepoAbsPath
         gitCommand(gitCmd, 2, **opts);
         printWithVars2(gitRepoSeperatorString, dryrun=False)
 
@@ -885,7 +885,7 @@ def getResolvedOptions(args):
 
 
 def main():
-    global syncFilePath, syncRepoPath, cwd, verbosity, dryrun, _config
+    global syncFilePath, syncRepoAbsPath, cwd, verbosity, dryrun, _config
     args, remaining_args = parseArguments()
 
     _config = getResolvedOptions(args)
@@ -897,7 +897,7 @@ def main():
     verbosity = _config['general.verbosity']
     colorize = _config['general.colorize']
     syncFilePath = _config['general.syncfile']
-    syncRepoPath = os.path.dirname(os.path.abspath(syncFilePath))
+    syncRepoAbsPath = os.path.dirname(os.path.abspath(syncFilePath))
     dryrun = _config['args.dryrun']
     set_execute_defaults('verbosity', verbosity)
     set_execute_defaults('dryrun', dryrun)
