@@ -17,7 +17,7 @@
 
 # Creating Repos
 
->>> ans = execute4('rm -rf repoFish repoBird repoSyncFile')
+>>> ans = execute4('rm -rf repoFish repoBird repoSyncFile zoosyncrepo animals')
 
 >>> ans = execute4('mkdir repoFish')
 >>> ans = execute4('git init', cwd='repoFish')
