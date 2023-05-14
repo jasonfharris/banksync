@@ -6,7 +6,6 @@ import sys
 import argparse
 import argcomplete
 import json
-from collections import OrderedDict
 from sysexecute import *
 from .banksync_common import *
 
@@ -487,7 +486,7 @@ def commandSync():
 def commandRecordRepos():
     global syncInfo # since we're modifying it
     syncDict = repositories(syncInfo)
-    newSyncDict = OrderedDict(syncDict)
+    newSyncDict = dict(syncDict)
     anyFailures = False
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
@@ -537,7 +536,7 @@ def commandCreateSyncfile():
     checkForSyncRepoDir(syncRepoAbsPath, existing = False)
 
     # Assemble the dictionary of repo Information for each repo
-    dictOfRepoInfo = OrderedDict()
+    dictOfRepoInfo = {}
     repoAbsPaths = {}
     anyFailures = False
     for repo in repoNames:
@@ -573,14 +572,17 @@ def commandCreateSyncfile():
         repoInfo["path"] = os.path.relpath(repoAbsPath, root)
 
     # Assemble The combined information with configuration and repositories
-    configurationDict = OrderedDict()
-    configurationDict["createdByBanksyncVersion"] = __version__
-    configurationDict["syncfileFormatVersion"] = __sync_file_version__
-    configurationDict["cwd"] = offset
-    configurationDict["syncreponameForClone"] = os.path.relpath(syncRepoAbsPath, root)
-    newSyncDict = OrderedDict()
-    newSyncDict["configuration"] = configurationDict
-    newSyncDict["repositories"] = dictOfRepoInfo
+    configurationDict = {
+        "createdByBanksyncVersion": __version__,
+        "syncfileFormatVersion": __sync_file_version__,
+        "cwd": offset,
+        "clone.syncreponame": os.path.relpath(syncRepoAbsPath, root),
+    }
+
+    newSyncDict = {
+        "configuration": configurationDict,
+        "repositories": dictOfRepoInfo,
+    }
 
     if dryrun:
         sys.exit(0)
@@ -646,7 +648,7 @@ def commandBisect():
         sys.exit(0)
 
     if command == 'start':
-        restoreDict = OrderedDict()
+        restoreDict = {}
         for repoName in syncDict:
             repoInfo = syncDict[repoName]
             offset = _config['relativePathToRepositories']

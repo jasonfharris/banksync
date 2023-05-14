@@ -8,7 +8,6 @@ import tempfile
 import re
 import glob
 import json
-from collections import OrderedDict
 from sysexecute import *
 import datetime
 import configparser
@@ -341,8 +340,8 @@ def loadBisectRestoreFromJson(syncRepoAbsPath):
         return None
     with open(bisectRestoreAbsPath) as f:
         jsonTxt = f.read()
-        restoreDict = json.loads(jsonTxt, object_pairs_hook=OrderedDict)
-        return restoreDict if restoreDict else OrderedDict()
+        restoreDict = json.loads(jsonTxt)
+        return restoreDict if restoreDict else {}
 
 def removeBisectRestoreFile(syncRepoAbsPath):
     bisectRestoreAbsPath = os.path.join(syncRepoAbsPath, '.bisectRestore')
@@ -353,7 +352,7 @@ def loadSyncFileAsDict(syncFilePath):
     checkForSyncRepo(syncFileAbsPath)
     with open(syncFileAbsPath) as f:
         jsonTxt = f.read()
-        syncInfo = json.loads(jsonTxt, object_pairs_hook=OrderedDict)
+        syncInfo = json.loads(jsonTxt)
         if not syncInfo:
             printWithVars1(f"failure! no repos where specified in the sync file at {syncFileAbsPath}.", 'red')
             sys.exit(1)
@@ -373,12 +372,12 @@ def writeDictToSyncFile(syncFilePath, dict):
 def dictFromCurrentRepoState(repoAbsPath, root, **kwargs):
     opts = merge({'cwd':".", 'verbosity': 3, 'raiseOnFailure': True}, kwargs)
     opts['cwd'] = repoAbsPath
-    newRepoInfo = OrderedDict()
+    newRepoInfo = {}
     newRepoInfo["path"] = os.path.relpath(repoAbsPath, root)
     succeeded = True
     try:
         res = gitCommand("git log HEAD -n 1 --date=iso --format=format:'\"sha\" : \"%H\",%n\"UnixTimeStamp\" : \"%at\",%n\"date\" : \"%ad\",%n\"author\" : \"%an\"'", **opts)
-        props = json.loads('{'+res["stdout"]+'}', object_pairs_hook=OrderedDict)
+        props = json.loads('{'+res["stdout"]+'}')
         newRepoInfo.update(props)
 
         res = gitCommand("git rev-list HEAD --count --first-parent", **opts)
