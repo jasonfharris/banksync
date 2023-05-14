@@ -58,6 +58,28 @@ def escapeAnsi(line):
     return ansi_escape.sub('', line)
 
 
+def prettyPrintDictionary(d, indent=0, indentStep=4):
+    """Pretty print a dictionary as simple keys and values, with support for nested dictionaries."""
+    maxKeyLength = 0
+    maxValueLength = 0
+
+    for key, value in d.items():
+        maxKeyLength = max(maxKeyLength, len(key))
+        if isinstance(value, dict):
+            maxValueLength = max(maxValueLength, max(len(str(k)) for k in value.keys()))
+        else:
+            maxValueLength = max(maxValueLength, len(str(value)))
+
+    for key in sorted(d.keys()):
+        value = d[key]
+        keySpecifier = f">{indent + maxKeyLength}"
+        valueSpecifier = f"<{maxValueLength}"
+        if isinstance(value, dict):
+            print(f"{key:{keySpecifier}} :")
+            prettyPrintDictionary(value, indent + indentStep, indentStep)
+        else:
+            valueStr = str(value)
+            print(f"{key:{keySpecifier}} : {valueStr:{valueSpecifier}}")
 
 # --------------------------------------------------------------------------------------------------------------------------
 # INI Config Handling
