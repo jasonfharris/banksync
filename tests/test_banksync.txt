@@ -144,6 +144,7 @@ True
 # Test bisect
 
 >>> ans = execute4('./bank_local gitall --syncfile repoSyncFile/syncfile.json checkout master')
+>>> ans = execute4('./bank_local bisect --syncfile repoSyncFile/syncfile.json reset')
 >>> ans = execute4('./bank_local bisect --syncfile repoSyncFile/syncfile.json start')
 >>> ans = execute4('./bank_local bisect --syncfile repoSyncFile/syncfile.json good {syncPoint1}')
 >>> ans = execute4('./bank_local bisect --syncfile repoSyncFile/syncfile.json bad {syncPoint3}')
@@ -254,7 +255,7 @@ True
 
 # Test clone
 
->>> ans = execute4('rm -rf repoFish repoBird repoSyncFile')
+>>> ans = execute4('rm -rf repoFish repoBird repoSyncFile animals')
 
 >>> ans = execute4('./bank_local clone https://github.com/testbank/animalsSyncRepo.git animals')
 >>> 'a27368bec17373938b1dcf73638945b89b60a9d0' == currentHash('animals/repoFish')
