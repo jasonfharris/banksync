@@ -1,3 +1,38 @@
+# 0.9.11
+
+Changes made in 0.9.11 can be summarized as follows:
+
+Code files:
+
+- Include the branch in the information we record for each repo in the syncfile.
+- Respect the 'colorize' option throughout BankSync.
+- Pass `syncFileAbsPath` as a parameter and localize other global variables.
+- Enable handling of `bank_sync` commands from anywhere within the project.
+- Introduce some utilities for handling version numbers.
+- Implement handling for some (or all) repository paths being absolute rather than relative.
+- Document the configuration options for the syncfile.
+- Move the default options to the section handling options.
+- Deprecate `OrderedDict` since in Python 3.7 it has become the standard.
+- For most commands, print the syncfile name or path upon success or failure to provide more context.
+- Transition to using a `syncInfo` object read from `syncFileAbsPath`.
+- In `bisect`, handle cases where a bisection state is not present.
+- Remove 'bankconfig.ini' from both the documentation and the test files.
+- Store the configuration in the syncfile, particularly the path from the syncrepo to the project root.
+- Use dictionaries to store the descriptions for command help.
+- Make the offset between the syncfile and the repositories consistent. Remove the `--cwd` option from the command line interface.
+- In the series of changes, work towards basing things on the path `syncFileAbsPath`.
+- Refactor the way commands are dispatched to create a more uniform dispatch mechanism.
+- Rename the variable `absRepoPath` to `repoAbsPath` in both files to improve consistency and clarity.
+
+Testing:
+
+1. Test paths which are outside the root and also absolute paths.
+
+
+# 0.9.10
+
+Fix documentation mistake
+
 # 0.9.9
 
 Changes made in 0.9.9 can be summarized as follows:
@@ -31,3 +66,4 @@ Code files:
 Testing:
 
 1. Updated a number of the tests so they are more robust around determining the path they are on.
+
