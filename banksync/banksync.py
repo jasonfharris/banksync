@@ -393,14 +393,13 @@ def _yellow(text):
 
 def commandSync():
     matching = _config['sync.matching']
-    checkForSyncRepo(syncFileAbsPath)
-    syncDict = loadSyncFileAsDict(syncFileAbsPath)
+    syncDict = repositories(syncInfo)
     allFound = True
 
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
         offset = _config['relativePathToRepositories']
-        repoAbsPath = os.path.join(syncRepoAbsPath, offset, repoInfo["path"])
+        repoAbsPath = os.path.normpath(os.path.join(syncRepoAbsPath, offset, repoInfo["path"]))
         repoString = paddedRepoName(repoName, list(syncDict.keys()))
         if not checkForRepo(repoString, repoAbsPath):
             allFound = False
@@ -485,8 +484,8 @@ def commandSync():
 # --------------------------------------------------------------------------------------------------------------------------
 
 def commandRecordRepos():
-    checkForSyncRepo(syncFileAbsPath)
-    syncDict = loadSyncFileAsDict(syncFileAbsPath)
+    global syncInfo # since we're modifying it
+    syncDict = repositories(syncInfo)
     newSyncDict = OrderedDict(syncDict)
     anyFailures = False
     for repoName in syncDict:
@@ -511,8 +510,13 @@ def commandRecordRepos():
 
     if dryrun:
         sys.exit(0)
+    
+    if 'repositories' in syncInfo:
+        syncInfo['repositories'] = newSyncDict
+    else:
+        syncInfo = newSyncDict
 
-    writeDictToSyncFile(syncFileAbsPath, newSyncDict)
+    writeDictToSyncFile(syncFileAbsPath, syncInfo)
 
     if anyFailures:
         printWithVars1("failure! not all constituent repos had their state recorded.", 'red')
@@ -627,10 +631,10 @@ def commandCreateSyncrepo():
 # --------------------------------------------------------------------------------------------------------------------------
 
 def commandBisect():
+    global syncInfo # since we are modifying it
     command = _config['args.bisectcmd']
     remainingArgs = _config['remaining_args']
-    checkForSyncRepo(syncFileAbsPath)
-    syncDict = loadSyncFileAsDict(syncFileAbsPath)
+    syncDict = repositories(syncInfo)
     currentRev = getCurrentRevHash(syncRepoAbsPath)
     anyFailures = False
 
@@ -661,6 +665,7 @@ def commandBisect():
     res = gitCommand(bisectCmd, 2, cwd=syncRepoAbsPath, verbosity=verbosity);
     newRev = getCurrentRevHash(syncRepoAbsPath)
     if newRev != currentRev:
+        syncInfo = fetchSyncFileDict(syncFileAbsPath)
         commandSync()
 
     if command == 'reset':
@@ -676,7 +681,7 @@ def commandBisect():
             try:
                 rev = restoreDict[repoAbsPath] if (repoAbsPath in restoreDict) else None
                 if not rev:
-                    raise Exception("Restore changesete not found")
+                    raise Exception("Restore change set not found")
                 res = gitCommand("git checkout {rev}", 3, cwd=repoAbsPath, verbosity=verbosity)
                 printWithVars2(f"{_green(repoString)}: restoring repository state to '{rev}' after finishing bisect")
             except:
@@ -694,7 +699,7 @@ def commandBisect():
 # --------------------------------------------------------------------------------------------------------------------------
 
 def commandClone():
-    global syncFileAbsPath, syncRepoAbsPath, cwd
+    global syncFileAbsPath, syncRepoAbsPath, cwd, syncInfo
     cloneURL = _config['args.url']
     if not isValidGitUrl(cloneURL):
         print(colored("failure! {cloneURL} appears not to be a URL that works with git clone.", 'red'))
@@ -725,6 +730,7 @@ def commandClone():
         sys.exit(1)
 
     _config['relativePathToRepositories'] = ".." #XXX needs work
+    syncInfo = loadSyncFileAsDict(syncFileAbsPath)
     commandPopulate()
 
 
@@ -734,8 +740,7 @@ def commandClone():
 # --------------------------------------------------------------------------------------------------------------------------
 
 def commandPopulate():
-    checkForSyncRepo(syncFileAbsPath)
-    syncDict = loadSyncFileAsDict(syncFileAbsPath)
+    syncDict = repositories(syncInfo)
     anyFailures = False
 
     opts = {'captureStdOutStdErr':False, 'verbosity':verbosity}
@@ -780,8 +785,7 @@ def commandPopulate():
 # --------------------------------------------------------------------------------------------------------------------------
 
 def commandStatus():
-    checkForSyncRepo(syncFileAbsPath)
-    syncDict = loadSyncFileAsDict(syncFileAbsPath)
+    syncDict = repositories(syncInfo)
     anyFailures = False
 
     for repoName in syncDict:
@@ -844,8 +848,7 @@ def distributeGitCommand():
     gitCmd = f"git {command} " + " ".join(remainingArgs)
     gitCmd = gitCmd.strip()
     gitRepoSeperatorString = (_config['general.seperator']*40)[0:40]
-    checkForSyncRepoDir(syncRepoAbsPath)
-    syncDict = loadSyncFileAsDict(syncFileAbsPath)
+    syncDict = repositories(syncInfo)
     anyFailures = False
     opts = {'captureStdOutStdErr':False, 'verbosity':verbosity}
     printWithVars2(gitRepoSeperatorString, dryrun=False)
@@ -964,13 +967,19 @@ def getResolvedOptions(args, remaining_args):
     
     return bankOptions
 
+def fetchSyncFileDict(syncFileAbsPath):
+    if _config['args.command'] in banksync_operation_commands:
+        checkForSyncRepoDir(syncRepoAbsPath)
+        return loadSyncFileAsDict(syncFileAbsPath)
+    return None
 
 def main():
-    global syncFileAbsPath, syncRepoAbsPath, verbosity, dryrun, _config
+    global syncFileAbsPath, syncRepoAbsPath, verbosity, dryrun, _config, syncInfo
     args, remaining_args = parseArguments()
 
     _config = getResolvedOptions(args, remaining_args)
     syncFileAbsPath, syncRepoAbsPath = determinePaths(_config)
+    syncInfo = fetchSyncFileDict(syncFileAbsPath)
 
     _config['relativePathToRepositories'] = ".." # This is the path from the syncFile to the Repositories location
     verbosity = _config['general.verbosity']

@@ -172,7 +172,7 @@ update client repos to master, and sync repo to syncPoint1
 >>> ans = execute4('git checkout {syncPoint1}', cwd='repoSyncFile')
 
 remove hashes from syncfile.json
->>> dict = loadSyncFileAsDict('repoSyncFile/syncfile.json')
+>>> dict = repositories(loadSyncFileAsDict('repoSyncFile/syncfile.json'))
 >>> del dict['repoFish']['sha']
 >>> del dict['repoBird']['sha']
 >>> writeDictToSyncFile('repoSyncFile/syncfile.json', dict)
@@ -189,7 +189,7 @@ checkout syncPoint2
 >>> ans = execute4('git checkout {syncPoint2}', cwd='repoSyncFile')
 
 remove hashes from syncfile.json and alter the UnixTimeStamps
->>> dict = loadSyncFileAsDict('repoSyncFile/syncfile.json')
+>>> dict = repositories(loadSyncFileAsDict('repoSyncFile/syncfile.json'))
 >>> del dict['repoFish']['sha']
 >>> del dict['repoBird']['sha']
 >>> dict['repoFish']['UnixTimeStamp'] = str(int(dict['repoFish']['UnixTimeStamp'])+1)

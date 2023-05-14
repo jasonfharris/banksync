@@ -326,18 +326,19 @@ def removeBisectRestoreFile(syncRepoAbsPath):
     bisectRestoreAbsPath = os.path.join(syncRepoAbsPath, '.bisectRestore')
     os.remove(bisectRestoreAbsPath)
 
-def loadSyncFileAsDict(syncFilePath, repositoriesOnly=True):
+def loadSyncFileAsDict(syncFilePath):
     syncFileAbsPath = os.path.abspath(syncFilePath)
     checkForSyncRepo(syncFileAbsPath)
     with open(syncFileAbsPath) as f:
         jsonTxt = f.read()
-        syncDict = json.loads(jsonTxt, object_pairs_hook=OrderedDict)
-        if not syncDict:
+        syncInfo = json.loads(jsonTxt, object_pairs_hook=OrderedDict)
+        if not syncInfo:
             printWithVars1(f"failure! no repos where specified in the sync file at {syncFileAbsPath}.", 'red')
             sys.exit(1)
-        if repositoriesOnly and 'repositories' in syncDict:
-            return syncDict['repositories']
-        return syncDict
+        return syncInfo
+
+def repositories(syncInfo):
+    return syncInfo['repositories'] if 'repositories' in syncInfo else syncInfo # backwards compatibility 
 
 def writeDictToSyncFile(syncFilePath, dict):
     newFileContents = json.dumps(dict, indent=4)
