@@ -558,15 +558,15 @@ def commandCreateSyncfile():
 
     # Assemble The combined information with configuration and repositories
     configurationDict = {
-        "createdByBanksyncVersion": __version__,
-        "syncfileFormatVersion": __sync_file_version__,
-        "cwd": offset,
-        "clone.syncreponame": os.path.relpath(syncRepoAbsPath, root),
+        "createdByBanksyncVersion": __version__,                          # Version of banksync used to create the syncfile
+        "syncfileFormatVersion": __sync_file_version__,                     # Version of the syncfile format
+        "relativePathToRepositories": offset,                             # Relative path from the sync repo to the root of the repositories
+        "clone.syncreponame": os.path.relpath(syncRepoAbsPath, root),     # The name of the sync repo when cloned                            
     }
 
     newSyncDict = {
-        "configuration": configurationDict,
-        "repositories": dictOfRepoInfo,
+        "configuration": configurationDict,                                 # The syncfile configuration information
+        "repositories": dictOfRepoInfo,                                   # The information for each repository
     }
 
     if dryrun:
