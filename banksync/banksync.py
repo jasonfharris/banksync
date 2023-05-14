@@ -25,21 +25,6 @@ defaultSyncPointBranchName = "syncPoint"
 # Command and Option setup
 # --------------------------------------------------------------------------------------------------------------------------
 
-defaultOptions = {
-    'general' : {
-        'syncfile' : 'syncfile.json',
-        'verbosity' : 2,
-        'colorize' : 'yes',
-        'seperator' : ' '
-    },
-    'sync' : {
-        'matching' : 'closetimestamp'
-    },
-    'create_syncrepo' : {
-        'syncfilename' : 'syncfile.json',
-        'syncreponame' : 'syncrepo'
-    }
-}
 
 # These can create a syncrepo or syncfile
 banksync_creation_commands = ['create_syncfile', 'create_syncrepo', 'clone']
@@ -937,6 +922,26 @@ def determinePaths(bankOptions):
 
     return syncFileAbsPath, syncRepoAbsPath
 
+
+# --------------------------------------------------------------------------------------------------------------------------
+# Option handling
+# --------------------------------------------------------------------------------------------------------------------------
+
+defaultOptions = {
+    'general' : {                           # The section of general default options
+        'syncfile' : 'syncfile.json',         # The defauly name of the syncfile when finding a syncfile
+        'verbosity' : 2,                    # The default verbosity level
+        'colorize' : 'yes',                 # The default colorize option
+        'seperator' : ' '                   # The default seperator for output
+    },
+    'sync' : {                              # The section of sync default options
+        'matching' : 'closetimestamp'       # The default matching option when we sync a repository to the syncpoint
+    },
+    'create_syncrepo' : {                   # The section of create_syncrepo default options
+        'syncfilename' : 'syncfile.json',     # The default name of the syncfile when creating a syncrepo
+        'syncreponame' : 'syncrepo'         # The default name of the syncrepo when creating a syncrepo
+    }
+}
 
 
 def getResolvedOptions(args, remaining_args):
