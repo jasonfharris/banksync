@@ -31,6 +31,25 @@
 >>> mergeOptionDicts(flattenDict(iniDict), flattenDict(newDict))
 {'sec1.key1': 'value1', 'sec1.key2': 'fish', 'sec1.key3': 'value3', 'sec2.keya': 'bird', 'sec2.keyb': 'valueB', 'sec2.keyc': 'valueC', 'sec3.foo': 'x', 'sec3.bar': 'y', 'sec3.baz': 'z'}
 
+
+# Test nestedGet
+
+Retrieve a nested value from a dictionary using a list of keys.
+
+>>> nested_data = {'a': {'b': {'c': 'value'}}}
+>>> nestedGet(nested_data, ['a', 'b', 'c'])
+'value'
+>>> nestedGet(nested_data, ['a', 'b', 'd'], 'default_value')
+'default_value'
+>>> nestedGet(nested_data, ['a', 'x', 'c'], 'default_value')
+'default_value'
+>>> flat_data = {'key': 'value'}
+>>> nestedGet(flat_data, ['key'])
+'value'
+>>> nestedGet(flat_data, ['nonexistent_key'], 'default_value')
+'default_value'
+
+
 # Test escapeAnsi
 
 >>> escapeAnsi(colored("hello",'red'))

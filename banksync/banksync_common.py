@@ -57,6 +57,15 @@ def escapeAnsi(line):
     return ansi_escape.sub('', line)
 
 
+def nestedGet(data, keys, default=None):
+    """Retrieve a nested value from a dictionary using a list of keys."""
+    for key in keys:
+        if not (isinstance(data, dict) and key in data):
+            return default
+        data = data[key]
+    return data
+
+
 def prettyPrintDictionary(d, indent=0, indentStep=4):
     """Pretty print a dictionary as simple keys and values, with support for nested dictionaries."""
     maxKeyLength = 0
