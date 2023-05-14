@@ -44,7 +44,7 @@
 >>> ans = execute4('git commit -am "committing sparrow"', cwd='repoBird')
 >>> sparrowHash_SP1 = currentHash('repoBird')
 
->>> ans = execute4('../bank_local create_syncfile repoFish repoBird', cwd='repoSyncFile')
+>>> ans = execute4('../bank_local create_syncfile ../repoFish ../repoBird', cwd='repoSyncFile')
 >>> ans = execute4('git add syncfile.json', cwd='repoSyncFile')
 >>> ans = execute4('git commit -am "syncPoint1"', cwd='repoSyncFile')
 >>> syncPoint1 = currentHash('repoSyncFile')

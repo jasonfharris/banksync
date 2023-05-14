@@ -361,6 +361,12 @@ def loadSyncFileAsDict(syncFilePath):
 def repositories(syncInfo):
     return syncInfo['repositories'] if 'repositories' in syncInfo else syncInfo # backwards compatibility 
 
+def relativePathToRepositories(syncInfo):
+    if 'configuration' in syncInfo:
+        if 'relativePathToRepositories' in syncInfo['configuration']:
+            return syncInfo['configuration']['relativePathToRepositories']
+    return ".." # backwards compatibility
+
 def writeDictToSyncFile(syncFilePath, dict):
     newFileContents = json.dumps(dict, indent=4)
     path = os.path.abspath(syncFilePath)
@@ -369,11 +375,10 @@ def writeDictToSyncFile(syncFilePath, dict):
     printWithVars3(f"Wrote new dictionary of bank sync information to {path}")
 
 
-def dictFromCurrentRepoState(repoAbsPath, root, **kwargs):
-    opts = merge({'cwd':".", 'verbosity': 3, 'raiseOnFailure': True}, kwargs)
+def dictFromCurrentRepoState(repoPath, repoAbsPath, **kwargs):
+    opts = merge({'verbosity': 3, 'raiseOnFailure': True}, kwargs)
     opts['cwd'] = repoAbsPath
-    newRepoInfo = {}
-    newRepoInfo["path"] = os.path.relpath(repoAbsPath, root)
+    newRepoInfo = {'path': repoPath}
     succeeded = True
     try:
         res = gitCommand("git log HEAD -n 1 --date=iso --format=format:'\"sha\" : \"%H\",%n\"UnixTimeStamp\" : \"%at\",%n\"date\" : \"%ad\",%n\"author\" : \"%an\"'", **opts)
