@@ -6,11 +6,13 @@ import sys
 import argparse
 import argcomplete
 import json
+from pathlib import Path
 from sysexecute import *
 from .banksync_common import *
 
 __version__ = "0.9.10"
 __sync_file_version__ = "1.0"
+__required_banksync_version__ = "0.9.10" # This is the minimum version of banksync that can read this file
 
 # --------------------------------------------------------------------------------------------------------------------------
 # Defines
@@ -575,6 +577,7 @@ def commandCreateSyncfile():
     # Assemble The combined information with configuration and repositories
     configurationDict = {
         "createdByBanksyncVersion": __version__,                          # Version of banksync used to create the syncfile
+        "requiredBanksyncVersion": __required_banksync_version__,         # Version of banksync required to use the syncfile
         "syncfileFormatVersion": __sync_file_version__,                     # Version of the syncfile format
         "relativePathToRepositories": offset,                             # Relative path from the sync repo to the root of the repositories
         "clone.syncreponame": os.path.relpath(syncRepoAbsPath, root),     # The name of the sync repo when cloned                            
@@ -913,6 +916,69 @@ def dispatchCommand():
 # Extract and clean the argument parameters
 # --------------------------------------------------------------------------------------------------------------------------
 
+# Checks if the given JSON file is a valid sync file with a minimum required version.
+def isJsonFileASyncFile(jsonFileAbsPath):
+    if not os.path.isfile(jsonFileAbsPath):
+        return False
+    
+    # read the file
+    try:
+        with open(jsonFileAbsPath) as f:
+            jsonTxt = f.read()
+            d = json.loads(jsonTxt)
+    except:
+        return False
+
+    # check if the file is a syncfile with a minimum version
+    if 'configuration' in d and 'requiredBanksyncVersion' in d['configuration']:
+        minVersion = d['configuration']['requiredBanksyncVersion']
+        creationVersion = d['configuration']['createdByBanksyncVersion']
+        if versionLessOrEqual(minVersion, __version__):
+            return True
+        print((f"Warning: The syncfile {jsonFileAbsPath} was created with banksync version {creationVersion} and it needs at least"
+            f" banksync version {minVersion} to work with this file, but you are running banksync version {__version__}. Please upgrade"
+            f" your version of banksync to at least version {minVersion} to use this file."))
+        sys.exit(1)
+
+    # compatibility: check if this is an oldstyle syncfile with just a list of repos
+    if isinstance(d, dict):
+        for name, value in d.items():
+            if (not isinstance(value, dict)) or (not 'UnixTimeStamp' in value):
+                return False
+        return True
+
+    return False
+
+
+def findSyncFileInDir(absDirectory):
+    # Check if the directory contains a '.git' directory
+    if not os.path.isdir(os.path.join(absDirectory, '.git')):
+        return None
+
+    # Check if the directory contains any files ending in '.json'
+    pathPattern = os.path.join(absDirectory, "*.json")
+    jsonFiles = glob.glob(pathPattern)
+    if not jsonFiles:
+        return None
+
+    # Check if the json file is a compatible syncfile
+    for file in jsonFiles:
+        syncFileAbsPath = os.path.join(absDirectory, file)
+        if isJsonFileASyncFile(syncFileAbsPath):
+            return syncFileAbsPath
+
+    return None    
+
+
+def findSyncFileAtDir(pathToCheck):
+    subdirectories = [name for name in os.listdir(pathToCheck) if os.path.isdir(os.path.join(pathToCheck, name))]
+    for directory in subdirectories:
+        syncFileAbsPath = findSyncFileInDir(os.path.join(pathToCheck, directory))
+        if syncFileAbsPath is not None:
+            return syncFileAbsPath
+    return None    
+
+
 def determinePaths(bankOptions):
     """determine syncFileAbsPath and syncRepoAbsPath"""
     command = bankOptions['args.command']
@@ -926,16 +992,25 @@ def determinePaths(bankOptions):
     if command == 'create_syncfile':
         return syncFileAbsPath, syncRepoAbsPath
 
-    passedInName = getattr(bankOptions, 'args.syncfile', 'auto')
-    if (passedInName == 'auto') or (os.path.abspath(passedInName) != syncFileAbsPath):
-        path = os.path.join(syncRepoAbsPath, "*.json")
-        jsonFiles = glob.glob(path)
-        if not jsonFiles:
-            print(colored(f"failure! could not locate the syncfile in {syncRepoAbsPath}.", 'red'))
-            sys.exit(1)
-        syncFileAbsPath = jsonFiles[0]
+    # From this point forward the syncfile and syncrepo must exist. We just need to find them.
+    passedInName = bankOptions.get('args.syncfile', 'auto')
+    if (passedInName != 'auto'):
+        syncFileAbsPath = os.path.abspath(passedInName)
+        checkForSyncRepoAndSyncFile(syncFileAbsPath)
+        return syncFileAbsPath, os.path.dirname(syncFileAbsPath)
 
-    return syncFileAbsPath, syncRepoAbsPath
+    absSyncFilePath = findSyncFileInDir(os.getcwd())
+    if absSyncFilePath is not None:
+        return absSyncFilePath, os.path.dirname(absSyncFilePath)
+    
+    pathToCheck = Path(os.getcwd())
+    while pathToCheck != pathToCheck.parent:
+        absSyncFilePath = findSyncFileAtDir(str(pathToCheck))
+        if absSyncFilePath is not None:
+            return absSyncFilePath, os.path.dirname(absSyncFilePath)
+        pathToCheck = pathToCheck.parent
+    printWithVars1(f"failure! no syncfile found in or above {os.getcwd()}.", 'red')
+    sys.exit(1)
 
 
 # --------------------------------------------------------------------------------------------------------------------------
@@ -966,30 +1041,30 @@ def getResolvedOptions(args, remaining_args):
         newOptions = flattenDict(getOptionDictFromIniFile('~/.bankconfigrc'))
         bankOptions = mergeOptionDicts(bankOptions, newOptions)
 
-    passedInOptions = {
+    argsOptions = vars(args)
+    passedInOptions = flattenDict({
         'general' : {
-            'syncfile' : getattr(args, 'syncfile', 'auto'),
-            'verbosity' : getattr(args, 'verbosity', autoNum),
-            'colorize' :  getattr(args, 'colorize', 'auto'),
-            'seperator' : getattr(args, 'seperator', 'auto'),
+            'syncfile' : argsOptions.get('syncfile', 'auto'),
+            'verbosity' : argsOptions.get('verbosity', autoNum),
+            'colorize' :  argsOptions.get('colorize', 'auto'),
+            'seperator' : argsOptions.get('seperator', 'auto'),
         },
         'sync' : {
-            'matching' : getattr(args, 'matching', 'auto')
+            'matching' : argsOptions.get('matching', 'auto')
         },
         'create_syncrepo' : {
-            'syncfilename' : getattr(args, 'syncfilename', 'auto'),
-            'syncreponame' : getattr(args, 'syncreponame', 'auto')
+            'syncfilename' : argsOptions.get('syncfilename', 'auto'),
+            'syncreponame' : argsOptions.get('syncreponame', 'auto')
         }
-    }
+    })
 
-    bankOptions = mergeOptionDicts(bankOptions, flattenDict(passedInOptions))
+    bankOptions = mergeOptionDicts(bankOptions, passedInOptions)
 
     # normalize non-string options
     bankOptions['general.verbosity'] = int(bankOptions['general.verbosity'])
     bankOptions['general.colorize'] = bankOptions['general.colorize'].lower() in ['yes','true']
 
-    argsOptions = flattenDict({'args' : vars(args)})
-    bankOptions['args'] = vars(args)
+    bankOptions['args'] = argsOptions
     bankOptions['remaining_args'] = remaining_args
     bankOptions = flattenDict(bankOptions)
     

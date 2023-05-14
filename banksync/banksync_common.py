@@ -190,7 +190,7 @@ def checkForSyncRepoDir(syncRepoAbsPath, existing = True):
             printWithVars1(f"failure! {syncRepoAbsPath} is not a git repository.", 'red')
         sys.exit(1)
 
-def checkForSyncRepo(syncFileAbsPath):
+def checkForSyncRepoAndSyncFile(syncFileAbsPath):
     syncRepoAbsPath = os.path.dirname(syncFileAbsPath)
     checkForSyncRepoFile(syncFileAbsPath)
     checkForSyncRepoDir(syncRepoAbsPath)
@@ -384,7 +384,7 @@ def removeBisectRestoreFile(syncRepoAbsPath):
 
 def loadSyncFileAsDict(syncFilePath):
     syncFileAbsPath = os.path.abspath(syncFilePath)
-    checkForSyncRepo(syncFileAbsPath)
+    checkForSyncRepoAndSyncFile(syncFileAbsPath)
     with open(syncFileAbsPath) as f:
         jsonTxt = f.read()
         syncInfo = json.loads(jsonTxt)
