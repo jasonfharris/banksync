@@ -290,7 +290,6 @@ def getSyncFileInDir(srcDir):
 def getCurrentBranchOrHash(repoAbsPath):
     try:
         res = gitCommand("git branch", 3, cwd=repoAbsPath, verbosity=1, ignoreErrors=False)
-        restore = None
         m = re.search(r'^\* \(HEAD detached at.*', res["stdout"], re.MULTILINE)
         if m:
             return getCurrentRevHash(repoAbsPath)

@@ -708,8 +708,7 @@ def commandClone():
     print(f"\r>> cloning {cloneURL}...", end='', flush=True)
     res = gitCommand("git clone {cloneURL} {destName}", 3, **opts)
     if res['code'] != 0:
-        anyFailures = True
-        printWithVars2(f"\r{_red(cloneURL)}: error cloning repo to {destNameAbsPath}: {res['stderr']}")
+        printWithVars2(f"\r{_red(cloneURL)}: error cloning repo to {destNameAbsPath}:\n    {res['stderr']}")
         sys.exit(1)
 
     printWithVars2(f"\r{_green(cloneURL)}: cloned repo to {destNameAbsPath}")
@@ -722,9 +721,8 @@ def commandClone():
 
     syncFileAbsPath = getSyncFileInDir(syncRepoAbsPath)
     if not syncFileAbsPath:
-            anyFailures = True
-            printWithVars2(f"{_red('failure!') }: no syncfile found at {destNameAbsPath} or {syncRepoAbsPath}")
-            sys.exit(1)
+        printWithVars2(f"{_red('failure!') }: no syncfile found at {destNameAbsPath} or {syncRepoAbsPath}")
+        sys.exit(1)
 
     _config['relativePathToRepositories'] = ".." #XXX needs work
     commandPopulate()
