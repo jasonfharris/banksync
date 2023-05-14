@@ -1,0 +1,44 @@
+# --------------------------------------------------------------------------------------------------------------------------
+# Test banksync functionality with config file
+# --------------------------------------------------------------------------------------------------------------------------
+
+>>> import sys, os, time
+>>> from sysexecute import *
+
+>>> from test_setup import setup_path
+>>> setup_path()
+>>> from banksync import *
+
+>>> set_execute_defaults('verbosity', 2)
+>>> set_execute_defaults('captureStdOutStdErr', True)
+>>> def currentHash(repo):
+...     return execute4('git rev-parse HEAD', cwd=repo)[1].strip()
+
+
+# Creating Repos
+
+>>> ans = execute4('rm -rf repoFish repoBird repoSyncFile animals zoosyncrepo')
+
+>>> ans = execute4('./bank_local clone https://github.com/testbank/animalsSyncRepo.git animals')
+>>> fishHash = currentHash('animals/repoFish')
+>>> birdHash = currentHash('animals/repoBird')
+
+>>> ans = execute4('mv animals/repoFish repoFish')
+>>> ans = execute4('./bank_local create_syncrepo --syncreponame zoosyncrepo --syncfilename joekeeper.json repoFish animals/repoBird')
+>>> ans = execute4('rm -rf repoFish repoBird animals')
+>>> ans = execute4('./bank_local populate --syncfile zoosyncrepo/joekeeper.json')
+>>> fishHash == currentHash('repoFish')
+True
+>>> birdHash == currentHash('animals/repoBird')
+True
+
+>>> ans = execute4('rm -rf zoosyncrepo foo')
+>>> ans = execute4('mkdir -p foo/bar')
+>>> ans = execute4('./bank_local create_syncrepo --syncreponame foo/bar/zoosyncrepo --syncfilename joekeeper.json repoFish animals/repoBird')
+>>> ans = execute4('rm -rf repoFish repoBird animals')
+>>> ans = execute4('./bank_local populate --syncfile foo/bar/zoosyncrepo/joekeeper.json')
+>>> fishHash == currentHash('repoFish')
+True
+>>> birdHash == currentHash('animals/repoBird')
+True
+
