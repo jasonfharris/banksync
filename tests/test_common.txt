@@ -86,3 +86,25 @@ True
 'someProjectRepo'
 >>> getRepoNameFromUrl("https://example.com/syncRepo.git")
 'WrapperProject'
+
+
+# Test versionLessOrEqual
+
+>>> versionLessOrEqual('1.2.3', '1.2.3')
+True
+>>> versionLessOrEqual('1.2.3', '2.2.3')
+True
+>>> versionLessOrEqual('2.2.3', '1.2.3')
+False
+>>> versionLessOrEqual('2.2.3.4', '2.2.3')
+False
+>>> versionLessOrEqual('2.2.3', '2.2.3.4')
+True
+>>> versionLessOrEqual('2.2.3.0', '2.2.3')
+True
+>>> versionLessOrEqual('2.2.3', '2.2.3.0')
+True
+>>> versionLessOrEqual('1.2', '2.0.0')
+True
+>>> versionLessOrEqual('2', '3')
+True

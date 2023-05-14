@@ -89,6 +89,32 @@ def prettyPrintDictionary(d, indent=0, indentStep=4):
             valueStr = str(value)
             print(f"{key:{keySpecifier}} : {valueStr:{valueSpecifier}}")
 
+
+# --------------------------------------------------------------------------------------------------------------------------
+# Version number handling
+# --------------------------------------------------------------------------------------------------------------------------
+
+# versionLessOrEqual checks if one version number is less than or equal to another version number, considering
+# both major and minor version parts.
+def versionLessOrEqual(version1, version2):
+    parts1 = version1.split('.')
+    parts2 = version2.split('.')
+
+    # Pad the parts with zeros if one version has more parts than the other
+    while len(parts1) < len(parts2):
+        parts1.append('0')
+    while len(parts2) < len(parts1):
+        parts2.append('0')
+
+    for part1, part2 in zip(parts1, parts2):
+        if int(part1) < int(part2):
+            return True
+        elif int(part1) > int(part2):
+            return False
+
+    return True  # Both versions are equal
+
+
 # --------------------------------------------------------------------------------------------------------------------------
 # INI Config Handling
 # --------------------------------------------------------------------------------------------------------------------------
