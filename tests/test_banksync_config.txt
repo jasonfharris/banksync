@@ -198,7 +198,7 @@ remove hashes from syncfile.json and alter the UnixTimeStamps
 
 confirm that we get no update unless if we allow only exact timestamps
 >>> ans = execute4('../bank_local sync --matching timestamp', ignoreErrors=True, cwd='repoSyncFile')
->>> bool(re.search('failure! not all repos checked out to the specified sync state.', ans[1]))
+>>> bool(re.search('failure! not all repos checked out to the state given in syncfile.json.', ans[1]))
 True
 
 >>> troutHash_SP1 == currentHash('repoFish')

@@ -469,12 +469,13 @@ def commandSync():
         if not found and not dryrun:
             allFound = False
             printWithVars2(f"{_red(repoString)}: failed to check out specified revision by any method.")
+    syncFilePath = os.path.relpath(syncFileAbsPath, os.getcwd())
     if dryrun:
         pass
     elif allFound:
-        print(colored("success! all repos checked out to the specified sync state.", 'green'))
+        print(colored(f"success! all repos checked out to the state given in {syncFilePath}.", 'green'))
     else:
-        print(colored("failure! not all repos checked out to the specified sync state.", 'red'))
+        print(colored(f"failure! not all repos checked out to the state given in {syncFilePath}.", 'red'))
         sys.exit(1)
 
 
@@ -518,11 +519,12 @@ def commandRecordRepos():
 
     writeDictToSyncFile(syncFileAbsPath, syncInfo)
 
+    syncFilePath = os.path.relpath(syncFileAbsPath, os.getcwd())
     if anyFailures:
-        printWithVars1("failure! not all constituent repos had their state recorded.", 'red')
+        printWithVars1(f"failure! not all constituent repos had their state recorded to {syncFilePath}.", 'red')
         sys.exit(1)
     else:
-        printWithVars1("success! all constituent repos had their state recorded.", 'green')
+        printWithVars1(f"success! all constituent repos had their state recorded to {syncFilePath}.", 'green')
 
 
 
@@ -585,11 +587,12 @@ def commandCreateSyncfile():
 
     writeDictToSyncFile(syncFileAbsPath, newSyncDict)
 
+    syncFilePath = os.path.relpath(syncFileAbsPath, os.getcwd())
     if anyFailures:
-        printWithVars1("failure! not all constituent repos had their state recorded.",'red',)
+        printWithVars1(f"failure! not all repos had their state recorded to {syncFilePath}.",'red',)
         sys.exit(1)
     else:
-        printWithVars1("success! all constituent repos had their state recorded.", 'green')
+        printWithVars1(f"success! all repos had their state recorded to {syncFilePath}.", 'green')
 
 
 
@@ -770,13 +773,15 @@ def commandPopulate():
             anyFailures = True
             printWithVars2(f"\r{_red(repoString)}: error cloning repo to {repoAbsPath}")
 
+
+    syncFilePath = os.path.relpath(syncFileAbsPath, os.getcwd())
     if dryrun:
         sys.exit(0)
     if anyFailures:
-        print(colored("failure! not all repos populated.", 'red'))
+        print(colored(f"failure! not all repos from {syncFilePath} were populated.", 'red'))
         sys.exit(1)
 
-    print(colored("success! all repos populated.", 'green'))
+    print(colored(f"success! all repos from {syncFilePath} were populated.", 'green'))
     commandSync()
 
 
@@ -867,11 +872,12 @@ def distributeGitCommand():
         gitCommand(gitCmd, 2, **opts);
         printWithVars2(gitRepoSeperatorString, dryrun=False)
 
+    syncFilePath = os.path.relpath(syncFileAbsPath, os.getcwd())
     if anyFailures:
-        printWithVars1("failure! not all constituent repos present.", 'red')
+        printWithVars1(f"failure! not all repos in {syncFilePath} present.", 'red')
         sys.exit(1)
     else:
-        printWithVars1(f"all constituent repos issued git command '{gitCmd}'", 'green')
+        printWithVars1(f"all repos in {syncFilePath} issued git command '{gitCmd}'", 'green')
 
 
 
