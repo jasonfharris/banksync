@@ -1077,7 +1077,13 @@ def fetchSyncFileDict(syncFileAbsPath):
     return None
 
 def main():
-    global syncFileAbsPath, syncRepoAbsPath, verbosity, dryrun, _config, syncInfo
+    global syncFileAbsPath # This is the absolute path to the syncfile if there is one  
+    global syncRepoAbsPath # This is the absolute path to the syncrepo if there is one
+    global verbosity       # This is the verbosity level under which we are reporting information
+    global dryrun          # Whether we are in dryrun mode
+    global _config          # This is the configuration dictionary containing all the resolved options
+    global syncInfo        # This is the dictionary loaded from the syncfile if there is one
+
     args, remaining_args = parseArguments()
 
     _config = getResolvedOptions(args, remaining_args)
