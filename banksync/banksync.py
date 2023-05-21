@@ -2,6 +2,7 @@
 # PYTHON_ARGCOMPLETE_OK
 
 import os.path
+from typing import List, Optional
 import sys
 import argparse
 import argcomplete
@@ -13,6 +14,13 @@ from .banksync_common import *
 __version__ = "0.9.10"
 __sync_file_version__ = "1.0"
 __required_banksync_version__ = "0.9.10" # This is the minimum version of banksync that can read this file
+
+
+# Global type definitions
+verbosity: int                 # This is the verbosity level under which we are reporting information
+dryrun : bool                  # Whether we are in dryrun mode
+_config: dict                   # This is the configuration dictionary containing all the resolved options
+
 
 # --------------------------------------------------------------------------------------------------------------------------
 # Defines
@@ -372,9 +380,10 @@ def _yellow(text):
 #     if not colorize:
 #         return colored(text, 'yellow')
 
-def getRepoAbsPath(repo, offset):
+def getRepoAbsPath(syncFileAbsPath, offset, repo):
     if os.path.isabs(repo):
-        return repo    
+        return repo
+    syncRepoAbsPath = os.path.dirname(syncFileAbsPath)
     return os.path.normpath(os.path.join(syncRepoAbsPath, offset, repo))
 
 
@@ -382,15 +391,16 @@ def getRepoAbsPath(repo, offset):
 # command "sync"
 # --------------------------------------------------------------------------------------------------------------------------
 
-def commandSync():
+def commandSync(syncFileAbsPath: str):
+    syncInfo = loadSyncFileAsDict(syncFileAbsPath)
     matching = _config['sync.matching']
-    syncDict = repositories(syncInfo)
+    syncDict : dict = repositories(syncInfo)
     offset = relativePathToRepositories(syncInfo)
     allFound = True
 
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
-        repoAbsPath = getRepoAbsPath(repoInfo["path"], offset)
+        repoAbsPath = getRepoAbsPath(syncFileAbsPath, offset, repoInfo["path"])
         repoString = paddedRepoName(repoName, list(syncDict.keys()))
         if not checkForRepo(repoString, repoAbsPath):
             allFound = False
@@ -460,6 +470,7 @@ def commandSync():
         if not found and not dryrun:
             allFound = False
             printWithVars2(f"{_red(repoString)}: failed to check out specified revision by any method.")
+
     syncFilePath = os.path.relpath(syncFileAbsPath, os.getcwd())
     if dryrun:
         pass
@@ -475,8 +486,8 @@ def commandSync():
 # command "record_repos"
 # --------------------------------------------------------------------------------------------------------------------------
 
-def commandRecordRepos():
-    global syncInfo # since we're modifying it
+def commandRecordRepos(syncFileAbsPath: str):
+    syncInfo = loadSyncFileAsDict(syncFileAbsPath)
     syncDict = repositories(syncInfo)
     offset = relativePathToRepositories(syncInfo)
     newSyncDict = dict(syncDict)
@@ -484,7 +495,7 @@ def commandRecordRepos():
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
         repoPath = repoInfo["path"]
-        repoAbsPath = getRepoAbsPath(repoPath, offset)
+        repoAbsPath = getRepoAbsPath(syncFileAbsPath, offset, repoPath)
         repoString = paddedRepoName(repoName, list(syncDict.keys()))
         if not checkForRepo(repoString, repoAbsPath):
             anyFailures = True
@@ -523,9 +534,11 @@ def commandRecordRepos():
 # command "create_syncfile"
 # --------------------------------------------------------------------------------------------------------------------------
 
-def commandCreateSyncfile():
+def commandCreateSyncfile(syncFileAbsPath: str):
+    syncRepoAbsPath = os.path.dirname(syncFileAbsPath)
+
     repoArgs = _config['args.repos'] # This is the passed in list of repo names / paths
-    checkForSyncRepoDir(syncRepoAbsPath, existing = False)
+    checkForSyncRepoDir(syncFileAbsPath, existing = False)
     syncFilePath = os.path.relpath(syncFileAbsPath, os.getcwd()) # for printing / information purposes
     
     # Assemble the dictionary of repo Information for each repo
@@ -561,6 +574,7 @@ def commandCreateSyncfile():
     # Find the common root path for the relative repo paths and what that is relative to the syncRepoAbsPath
     absPaths = [info['absPath'] for info in repoPathInfo.values() if not info['wasAbsolute']]
     if not absPaths:
+        offset = '.'
         root = os.getcwd()
     else:
         commonPathPrefix = os.path.dirname(os.path.commonprefix(absPaths))
@@ -607,7 +621,7 @@ def commandCreateSyncfile():
 # --------------------------------------------------------------------------------------------------------------------------
 
 def commandCreateSyncrepo():
-    global syncRepoAbsPath, syncFileAbsPath
+    
     syncfilename = _config['create_syncrepo.syncfilename']
     syncreponame = _config['create_syncrepo.syncreponame']
 
@@ -631,7 +645,7 @@ def commandCreateSyncrepo():
     os.makedirs(syncRepoAbsPath)
     execute2("git init", cwd=syncRepoAbsPath)
 
-    commandCreateSyncfile()
+    commandCreateSyncfile(syncFileAbsPath)
 
 
 
@@ -639,11 +653,12 @@ def commandCreateSyncrepo():
 # command "bisect"
 # --------------------------------------------------------------------------------------------------------------------------
 
-def commandBisect():
-    global syncInfo # since we are modifying it
+def commandBisect(syncFileAbsPath: str):
+    syncRepoAbsPath = os.path.dirname(syncFileAbsPath)
+    syncInfo = loadSyncFileAsDict(syncFileAbsPath)
     command = _config['args.bisectcmd']
     remainingArgs = _config['remaining_args']
-    syncDict = repositories(syncInfo)
+    syncDict: dict = repositories(syncInfo)
     offset = relativePathToRepositories(syncInfo)
     currentRev = getCurrentRevHash(syncRepoAbsPath)
     anyFailures = False
@@ -656,7 +671,7 @@ def commandBisect():
         restoreDict = {}
         for repoName in syncDict:
             repoInfo = syncDict[repoName]
-            repoAbsPath = getRepoAbsPath(repoInfo["path"], offset)
+            repoAbsPath = getRepoAbsPath(syncFileAbsPath, offset, repoInfo["path"])
             repoString = paddedRepoName(repoName, list(syncDict.keys()))
             try:
                 rev = getCurrentBranchOrHash(repoAbsPath)
@@ -674,17 +689,16 @@ def commandBisect():
     res = gitCommand(bisectCmd, 2, cwd=syncRepoAbsPath, verbosity=verbosity);
     newRev = getCurrentRevHash(syncRepoAbsPath)
     if newRev != currentRev:
-        syncInfo = fetchSyncFileDict(syncFileAbsPath)
-        commandSync()
+        commandSync(syncFileAbsPath)
 
     if command == 'reset':
-        restoreDict = loadBisectRestoreFromJson(syncRepoAbsPath)
+        restoreDict = loadBisectRestoreFromJson(syncFileAbsPath)
         if not restoreDict:
             print(colored("We are not in a bisection or bisection record not found.", 'yellow'))
             sys.exit(0)
         for repoName in syncDict:
             repoInfo = syncDict[repoName]
-            repoAbsPath = getRepoAbsPath(repoInfo["path"], offset)
+            repoAbsPath = getRepoAbsPath(syncFileAbsPath, offset, repoInfo["path"])
             repoString = paddedRepoName(repoName, list(syncDict.keys()))
             try:
                 rev = restoreDict[repoAbsPath] if (repoAbsPath in restoreDict) else None
@@ -707,7 +721,6 @@ def commandBisect():
 # --------------------------------------------------------------------------------------------------------------------------
 
 def commandClone():
-    global syncFileAbsPath, syncRepoAbsPath, cwd, syncInfo
     cloneURL = _config['args.url']
     if not isValidGitUrl(cloneURL):
         print(colored("failure! {cloneURL} appears not to be a URL that works with git clone.", 'red'))
@@ -737,8 +750,7 @@ def commandClone():
         printWithVars2(f"{_red('failure!') }: no syncfile found at {destNameAbsPath} or {syncRepoAbsPath}")
         sys.exit(1)
 
-    syncInfo = loadSyncFileAsDict(syncFileAbsPath)
-    commandPopulate()
+    commandPopulate(syncFileAbsPath)
 
 
 
@@ -746,7 +758,8 @@ def commandClone():
 # command "populate"
 # --------------------------------------------------------------------------------------------------------------------------
 
-def commandPopulate():
+def commandPopulate(syncFileAbsPath: str):
+    syncInfo = loadSyncFileAsDict(syncFileAbsPath)
     syncDict = repositories(syncInfo)
     offset = relativePathToRepositories(syncInfo)
     anyFailures = False
@@ -754,7 +767,7 @@ def commandPopulate():
     opts = {'captureStdOutStdErr':False, 'verbosity':verbosity}
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
-        repoAbsPath = getRepoAbsPath(repoInfo["path"], offset)
+        repoAbsPath = getRepoAbsPath(syncFileAbsPath, offset, repoInfo["path"])
         repoString = paddedRepoName(repoName, list(syncDict.keys()))
         if "cloneURL" not in repoInfo:
             anyFailures = True
@@ -786,21 +799,22 @@ def commandPopulate():
         sys.exit(1)
 
     print(colored(f"success! all repos from {syncFilePath} were populated.", 'green'))
-    commandSync()
+    commandSync(syncFileAbsPath)
 
 
 # --------------------------------------------------------------------------------------------------------------------------
 # command "status"
 # --------------------------------------------------------------------------------------------------------------------------
 
-def commandStatus():
+def commandStatus(syncFileAbsPath: str):
+    syncInfo = loadSyncFileAsDict(syncFileAbsPath)
     syncDict = repositories(syncInfo)
     offset = relativePathToRepositories(syncInfo)
     anyFailures = False
 
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
-        repoAbsPath = getRepoAbsPath(repoInfo["path"], offset)
+        repoAbsPath = getRepoAbsPath(syncFileAbsPath, offset, repoInfo["path"])
         repoString = paddedRepoName(repoName, list(syncDict.keys()))
         if dryrun:
             printWithVars2(f"{repoString} : would give the status of the repo at {repoAbsPath}.", dryrun=False)
@@ -843,8 +857,8 @@ def commandStatus():
 # a git command
 # --------------------------------------------------------------------------------------------------------------------------
 
-def distributeGitCommand():
-
+def distributeGitCommand(syncFileAbsPath: str):
+    syncInfo = loadSyncFileAsDict(syncFileAbsPath)
     command = _config['args.gitcmd']
     includeSyncRepo = (_config['args.command'] == 'gitall')
     remainingArgs = _config['remaining_args']
@@ -865,7 +879,7 @@ def distributeGitCommand():
     
     for repoName in syncDict:
         repoInfo = syncDict[repoName]
-        repoAbsPath = getRepoAbsPath(repoInfo["path"], offset)
+        repoAbsPath = getRepoAbsPath(syncFileAbsPath, offset, repoInfo["path"])
         if not checkForRepo(repoName, repoAbsPath):
             anyFailures = True
             continue
@@ -873,6 +887,7 @@ def distributeGitCommand():
         gitCommand(gitCmd, 2, **opts);
         printWithVars2(gitRepoSeperatorString, dryrun=False)
     if includeSyncRepo:
+        syncRepoAbsPath = os.path.dirname(syncFileAbsPath)
         opts['cwd'] = syncRepoAbsPath
         gitCommand(gitCmd, 2, **opts);
         printWithVars2(gitRepoSeperatorString, dryrun=False)
@@ -890,23 +905,32 @@ def distributeGitCommand():
 # dispatch command
 # --------------------------------------------------------------------------------------------------------------------------
 
-def dispatchCommand():
-    command_map = {
+def dispatchCommand(syncFileAbsPath):
+
+    operation_command_map = {
         "sync": commandSync,
-        "clone": commandClone,
         "populate": commandPopulate,
         "status": commandStatus,
         "record_repos": commandRecordRepos,
-        "create_syncfile": commandCreateSyncfile,
-        "create_syncrepo": commandCreateSyncrepo,
         "bisect": commandBisect,
         "git": distributeGitCommand,
-        "gitall": distributeGitCommand,
+        "gitall": distributeGitCommand
+    }
+
+    creation_command_map = {
+        "clone": commandClone,
+        "create_syncrepo": commandCreateSyncrepo
     }
 
     command = _config['args.command']
-    if command in command_map:
-        command_map[command]()
+    if command in operation_command_map:
+        assert syncFileAbsPath is not None
+        operation_command_map[command](syncFileAbsPath)
+    elif command == "create_syncfile":
+        assert syncFileAbsPath is not None
+        commandCreateSyncfile(syncFileAbsPath)
+    elif command in creation_command_map:        
+        creation_command_map[command]()
     else:
         printWithVars1(f"failure! unkown command {command}.", 'red')
         sys.exit(1)
@@ -979,35 +1003,36 @@ def findSyncFileAtDir(pathToCheck):
     return None    
 
 
-def determinePaths(bankOptions):
-    """determine syncFileAbsPath and syncRepoAbsPath"""
+def determineSyncFileAbsPath(bankOptions):
+    """determine syncFileAbsPath from the command line arguments and the current working directory."""
     command = bankOptions['args.command']
 
     if command in ['clone', 'create_syncrepo']:
-        return None, None
+        return None
 
-    syncFileAbsPath = os.path.abspath(bankOptions['general.syncfile'])
-    syncRepoAbsPath = os.path.dirname(syncFileAbsPath)
+    syncFileAbsPath: str = os.path.abspath(bankOptions['general.syncfile'])
 
     if command == 'create_syncfile':
-        return syncFileAbsPath, syncRepoAbsPath
+        return syncFileAbsPath
 
     # From this point forward the syncfile and syncrepo must exist. We just need to find them.
     passedInName = bankOptions.get('args.syncfile', 'auto')
     if (passedInName != 'auto'):
         syncFileAbsPath = os.path.abspath(passedInName)
         checkForSyncRepoAndSyncFile(syncFileAbsPath)
-        return syncFileAbsPath, os.path.dirname(syncFileAbsPath)
+        return syncFileAbsPath
 
     absSyncFilePath = findSyncFileInDir(os.getcwd())
     if absSyncFilePath is not None:
-        return absSyncFilePath, os.path.dirname(absSyncFilePath)
+        checkForSyncRepoAndSyncFile(absSyncFilePath)
+        return absSyncFilePath
     
     pathToCheck = Path(os.getcwd())
     while pathToCheck != pathToCheck.parent:
         absSyncFilePath = findSyncFileAtDir(str(pathToCheck))
         if absSyncFilePath is not None:
-            return absSyncFilePath, os.path.dirname(absSyncFilePath)
+            checkForSyncRepoAndSyncFile(absSyncFilePath)
+            return absSyncFilePath
         pathToCheck = pathToCheck.parent
     printWithVars1(f"failure! no syncfile found in or above {os.getcwd()}.", 'red')
     sys.exit(1)
@@ -1070,25 +1095,14 @@ def getResolvedOptions(args, remaining_args):
     
     return bankOptions
 
-def fetchSyncFileDict(syncFileAbsPath):
-    if _config['args.command'] in banksync_operation_commands:
-        checkForSyncRepoDir(syncRepoAbsPath)
-        return loadSyncFileAsDict(syncFileAbsPath)
-    return None
 
 def main():
-    global syncFileAbsPath # This is the absolute path to the syncfile if there is one  
-    global syncRepoAbsPath # This is the absolute path to the syncrepo if there is one
-    global verbosity       # This is the verbosity level under which we are reporting information
-    global dryrun          # Whether we are in dryrun mode
-    global _config          # This is the configuration dictionary containing all the resolved options
-    global syncInfo        # This is the dictionary loaded from the syncfile if there is one
+    global verbosity, dryrun, _config
 
     args, remaining_args = parseArguments()
 
     _config = getResolvedOptions(args, remaining_args)
-    syncFileAbsPath, syncRepoAbsPath = determinePaths(_config)
-    syncInfo = fetchSyncFileDict(syncFileAbsPath)
+    syncFileAbsPath = determineSyncFileAbsPath(_config)
 
     verbosity = _config['general.verbosity']
     colorize = _config['general.colorize']
@@ -1097,7 +1111,7 @@ def main():
     set_execute_defaults('dryrun', dryrun)
     set_execute_defaults('colorize', colorize)
 
-    dispatchCommand()
+    dispatchCommand(syncFileAbsPath)
 
 
 if __name__ == '__main__':

@@ -30,7 +30,7 @@ autoNum = -1       # an arbitrary negative number to stand in for 'auto' in a nu
 
 def multipleReplace(mapping, text):
     """Replace multiple substrings in 'text' according to the given 'mapping' dictionary."""
-    regex = re.compile(f'({"|".join(map(re.escape, mapping.keys()))})')
+    regex = re.compile(f'({"|".join(map(re.escape, mapping.keys()))})') # type: ignore
     return regex.sub(lambda mo: mapping[mo.string[mo.start():mo.end()]], text)
 
 def dateFromTimestamp(ts):
@@ -176,9 +176,8 @@ def checkForSyncRepoFile(syncFileAbsPath):
         printWithVars1(f"failure! could not locate the sync file at {syncFileAbsPath}.", 'red')
         sys.exit(1)
 
-def checkForSyncRepoDir(syncRepoAbsPath, existing = True):
-    syncRepoAbsPath = os.path.abspath(syncRepoAbsPath)
-
+def checkForSyncRepoDir(syncFileAbsPath, existing = True):
+    syncRepoAbsPath = os.path.dirname(syncFileAbsPath)
     if not os.path.isdir(syncRepoAbsPath):
         printWithVars1(f"failure! could not locate the syncrepo dir at {syncRepoAbsPath}.", 'red')
         sys.exit(1)
@@ -191,9 +190,8 @@ def checkForSyncRepoDir(syncRepoAbsPath, existing = True):
         sys.exit(1)
 
 def checkForSyncRepoAndSyncFile(syncFileAbsPath):
-    syncRepoAbsPath = os.path.dirname(syncFileAbsPath)
     checkForSyncRepoFile(syncFileAbsPath)
-    checkForSyncRepoDir(syncRepoAbsPath)
+    checkForSyncRepoDir(syncFileAbsPath)
 
 
 
@@ -368,8 +366,9 @@ def writeBisectRestoreToJson(syncRepoAbsPath, restoreDict):
     with open(bisectRestoreAbsPath, 'w') as f:
         f.write(newFileContents)
 
-def loadBisectRestoreFromJson(syncRepoAbsPath):
-    checkForSyncRepoDir(syncRepoAbsPath)
+def loadBisectRestoreFromJson(syncFileAbsPath):
+    syncRepoAbsPath = os.path.dirname(syncFileAbsPath)
+    checkForSyncRepoDir(syncFileAbsPath)
     bisectRestoreAbsPath = os.path.join(syncRepoAbsPath, '.bisectRestore')
     if not os.path.exists(bisectRestoreAbsPath):
         return None
@@ -393,7 +392,7 @@ def loadSyncFileAsDict(syncFilePath):
             sys.exit(1)
         return syncInfo
 
-def repositories(syncInfo):
+def repositories(syncInfo: dict):
     return syncInfo['repositories'] if 'repositories' in syncInfo else syncInfo # backwards compatibility 
 
 def relativePathToRepositories(syncInfo):
