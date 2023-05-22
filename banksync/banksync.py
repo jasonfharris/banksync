@@ -364,21 +364,18 @@ def parseArguments():
 
 
 def _green(text):
-    return colored(text, 'green')
+    return colored(text, 'green') if _config['general.colorize'] else text
 def _red(text):
-    return colored(text, 'red')
+    return colored(text, 'red') if _config['general.colorize'] else text
 def _yellow(text):
-    return colored(text, 'yellow')
+    return colored(text, 'yellow') if _config['general.colorize'] else text
+def _blue(text):
+    return colored(text, 'blue') if _config['general.colorize'] else text
 
-# def _green(text):
-#     if not colorize:
-#         return colored(text, 'green')
-# def _red(text):
-#     if not colorize:
-#         return colored(text, 'red')
-# def _yellow(text):
-#     if not colorize:
-#         return colored(text, 'yellow')
+# This is actually dimmed not grey since grey appears like black text for me
+def _grey(text):
+    return '\033[2m'+text+"\033[00m" if _config['general.colorize'] else text
+
 
 def getRepoAbsPath(syncFileAbsPath, offset, repo):
     if os.path.isabs(repo):
@@ -475,9 +472,9 @@ def commandSync(syncFileAbsPath: str):
     if dryrun:
         pass
     elif allFound:
-        print(colored(f"success! all repos checked out to the state given in {syncFilePath}.", 'green'))
+        print(_green(f"success! all repos checked out to the state given in {syncFilePath}."))
     else:
-        print(colored(f"failure! not all repos checked out to the state given in {syncFilePath}.", 'red'))
+        print(_red(f"failure! not all repos checked out to the state given in {syncFilePath}."))
         sys.exit(1)
 
 
@@ -683,7 +680,7 @@ def commandBisect(syncFileAbsPath: str):
                 continue
         writeBisectRestoreToJson(syncRepoAbsPath, restoreDict)
         if anyFailures:
-            print(colored("failure! not all repo states recorded before bisect.", 'red'))
+            print(_red("failure! not all repo states recorded before bisect."))
 
     bisectCmd = f"git bisect {command} " + " ".join(remainingArgs)
     res = gitCommand(bisectCmd, 2, cwd=syncRepoAbsPath, verbosity=verbosity);
@@ -694,7 +691,7 @@ def commandBisect(syncFileAbsPath: str):
     if command == 'reset':
         restoreDict = loadBisectRestoreFromJson(syncFileAbsPath)
         if not restoreDict:
-            print(colored("We are not in a bisection or bisection record not found.", 'yellow'))
+            print(_yellow("We are not in a bisection or bisection record not found."))
             sys.exit(0)
         for repoName in syncDict:
             repoInfo = syncDict[repoName]
@@ -711,7 +708,7 @@ def commandBisect(syncFileAbsPath: str):
                 printWithVars2(f"{_red(repoString)}: error restoring original branch in {repoAbsPath}")
                 continue
         if anyFailures:
-            print(colored("failure! not all repo states restored after bisect.", 'red'))
+            print(_red("failure! not all repo states restored after bisect."))
         removeBisectRestoreFile(syncRepoAbsPath)
 
 
@@ -723,7 +720,7 @@ def commandBisect(syncFileAbsPath: str):
 def commandClone():
     cloneURL = _config['args.url']
     if not isValidGitUrl(cloneURL):
-        print(colored("failure! {cloneURL} appears not to be a URL that works with git clone.", 'red'))
+        print(_red("failure! {cloneURL} appears not to be a URL that works with git clone."))
         sys.exit(1)
     destName = _config['args.name']
     destName = destName if (destName is not None) else getRepoNameFromUrl(cloneURL)
@@ -795,10 +792,10 @@ def commandPopulate(syncFileAbsPath: str):
     if dryrun:
         sys.exit(0)
     if anyFailures:
-        print(colored(f"failure! not all repos from {syncFilePath} were populated.", 'red'))
+        print(_red(f"failure! not all repos from {syncFilePath} were populated."))
         sys.exit(1)
 
-    print(colored(f"success! all repos from {syncFilePath} were populated.", 'green'))
+    print(_green(f"success! all repos from {syncFilePath} were populated."))
     commandSync(syncFileAbsPath)
 
 
@@ -829,26 +826,22 @@ def commandStatus(syncFileAbsPath: str):
         stagedCount = getStagedCount(repoAbsPath)
         branchName = getBranchName(repoAbsPath)
 
-        # This is actually dimmed not grey since grey appears like black text for me
-        def greyText(txt):
-            return '\033[2m'+txt+"\033[00m"
-
-        description = f"{greyText('branch')}: {colored(branchName,'blue')}".strip()
+        description = f"{_grey('branch')}: {_blue(branchName)}".strip()
         description = description.strip()
 
         if modifiedCount > 0:
-            description = f"{description}, {greyText('modified')}: {modifiedCount}".strip()
+            description = f"{description}, {_grey('modified')}: {modifiedCount}".strip()
         if stagedCount > 0:
-            description = f"{description}, {greyText('staged')}: {stagedCount}".strip()
+            description = f"{description}, {_grey('staged')}: {stagedCount}".strip()
         print(f"{_green(repoString)} : {description}")
 
     if dryrun:
         sys.exit(0)
     if anyFailures:
-        print(colored("failure! not all repos reported the status correctly.", 'red'))
+        print(_red("failure! not all repos reported the status correctly."))
         sys.exit(1)
 
-    print(colored("success! all repos status reported.", 'green'))
+    print(_green("success! all repos status reported."))
 
 
 
@@ -1097,7 +1090,7 @@ def getResolvedOptions(args, remaining_args):
 
 
 def main():
-    global verbosity, dryrun, _config
+    global verbosity, dryrun, _config, colorize
 
     args, remaining_args = parseArguments()
 
