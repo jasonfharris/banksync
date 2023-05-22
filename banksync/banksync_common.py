@@ -368,7 +368,6 @@ def writeBisectRestoreToJson(syncRepoAbsPath, restoreDict):
 
 def loadBisectRestoreFromJson(syncFileAbsPath):
     syncRepoAbsPath = os.path.dirname(syncFileAbsPath)
-    checkForSyncRepoDir(syncFileAbsPath)
     bisectRestoreAbsPath = os.path.join(syncRepoAbsPath, '.bisectRestore')
     if not os.path.exists(bisectRestoreAbsPath):
         return None
@@ -418,6 +417,9 @@ def dictFromCurrentRepoState(repoPath, repoAbsPath, **kwargs):
         res = gitCommand("git log HEAD -n 1 --date=iso --format=format:'\"sha\" : \"%H\",%n\"UnixTimeStamp\" : \"%at\",%n\"date\" : \"%ad\",%n\"author\" : \"%an\"'", **opts)
         props = json.loads('{'+res["stdout"]+'}')
         newRepoInfo.update(props)
+
+        res = gitCommand("git rev-parse --abbrev-ref HEAD", **opts)
+        newRepoInfo["branch"] = res["stdout"].strip()
 
         res = gitCommand("git rev-list HEAD --count --first-parent", **opts)
         newRepoInfo["revisionNumber"] = res["stdout"].strip()
