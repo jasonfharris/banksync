@@ -96,7 +96,7 @@ def prettyPrintDictionary(d, indent=0, indentStep=4):
 
 # versionLessOrEqual checks if one version number is less than or equal to another version number, considering
 # both major and minor version parts.
-def versionLessOrEqual(version1, version2):
+def versionLessOrEqual(version1: str, version2: str):
     parts1 = version1.split('.')
     parts2 = version2.split('.')
 
