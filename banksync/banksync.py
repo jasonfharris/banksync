@@ -87,6 +87,7 @@ allGitCommands = [
 
 matchingOptionValues = ['shaOnly', 'timestamp', 'closetimestamp']
 colorizeOptionValues = ['yes', 'no']
+syncBranchesOptionValues = ['yes', 'no', 'force']
 
 
 # --------------------------------------------------------------------------------------------------------------------------
@@ -120,19 +121,30 @@ cmdDescription['sync'] = cmdHelp['sync']
 cmdEpilog ['sync']= wrapParagraphs(
     '''Example usage:
 
-  bank sync --syncfile syncfile.json
+  bank sync
 
-This would checkout / update the repos given in the syncfile.json to the states given
-in the syncfile.json.
+This would find the "prevaling" syncfile.json and checkout / update the repos specified in the syncfile to the states given
+in the syncfile and list the results of the sync on each repo in the bank.
 
   bank sync --syncfile some/dir/syncfile.json
 
 This would checkout / update the repos given in the syncfile.json located at some/dir to the states given
 in the syncfile.json.
 
-  bank sync
+  bank sync --syncBranches yes
 
-Use the syncfile in the current syncrepo directory and list the results of the sync on each repo in the bank.
+Sync the repos in the bank to the "prevaling" syncfile.json and sync the branches specified in the
+syncfile to the commits specified in the syncfile. This is useful if you want to change the branches to
+their state specified in the syncfile. If a branch for a child repo given in the syncfile already exists in the
+child repo, then don't move the branch. If the branch does not exist in the child repo, then create the branch
+and point it to the commit specified in the syncfile.
+
+  bank sync --syncBranches force
+  
+If the force option is used, then this acts like `--syncBranches yes` however the branch will be created or
+moved to the committ given in the syncfile even if the branch already exists in the child repo and is pointing
+to a different commit. (Be aware of course that this will move the local branches in the child repos to the commits
+specified in the syncfile and as such commits could be lost if there are no other references to them.)
 ''')
 
 
@@ -302,6 +314,7 @@ def parseArguments():
 
     parser_syncCmd = addSubparser('sync')
     parser_syncCmd.add_argument("--matching", metavar="MATCH", help=f'specify how we can recognize a revision "match": {matchingOptionValues}', choices=matchingOptionValues, default='auto')
+    parser_syncCmd.add_argument('--syncBranches', metavar='BRANCHES', help=f"Sync branches as well: {syncBranchesOptionValues}", choices=syncBranchesOptionValues, default='no')
 
     parser_record_reposCmd = addSubparser('record_repos')
 
@@ -388,6 +401,18 @@ def getRepoAbsPath(syncFileAbsPath, offset, repo):
 # command "sync"
 # --------------------------------------------------------------------------------------------------------------------------
 
+def commandSync_branchParamAndMessage(repoInfo: dict, repoAbsPath: str, sha: str):
+    syncBranches = _config.get('args.syncbranches','no')
+    branchName = repoInfo.get("branch", defaultSyncPointBranchName)
+    branchSha = getShaForBranchName(repoAbsPath, branchName)
+    if (syncBranches == 'force') or (syncBranches == 'yes' and not branchSha):
+        branchSha = sha
+    if branchName == 'HEAD':
+        branchSha = 0
+    branchParam = f"-B {branchName} " if (branchSha == sha) else ""
+    branchMessage = f" ({_grey('branch')}: {_blue(branchName)})" if (branchSha == sha) else ""
+    return branchParam, branchMessage
+
 def commandSync_checkoutRepoBySha(repoInfo: dict, repoAbsPath: str, repoString: str, method: str):
     sha = repoInfo["sha"]
     shortHash = sha[0:12]
@@ -395,14 +420,10 @@ def commandSync_checkoutRepoBySha(repoInfo: dict, repoAbsPath: str, repoString: 
         printWithVars2(f"{repoString}: would try and check out revision by {method}: {shortHash}", dryrun=False)
         return True
 
-    branchName = repoInfo.get("branch", defaultSyncPointBranchName)
-    branchSha = getShaForBranchName(repoAbsPath, branchName)
-    branchParam = f"-B {branchName} " if (branchSha == sha) else ""
-    branchMessage = f" ({_grey('branch')}: {_blue(branchName)})".strip() if (branchSha == sha) else ""
-    
+    branchParam, branchMessage = commandSync_branchParamAndMessage(repoInfo, repoAbsPath, sha)    
     print(f"\r>> checking out {sha}{branchMessage}...", end='', flush=True)
 
-    res = gitCommand(f"git checkout {branchParam}{sha}", 3, cwd=repoAbsPath, verbosity=5)
+    res = gitCommand(f"git checkout {branchParam}{sha}", 3, cwd=repoAbsPath, verbosity=verbosity)
     if res["code"] == 0:
         revNum = getRevNumber(repoAbsPath)
         printWithVars2(f"\r{_green(repoString)}: successfully checked out revision by {method}: {shortHash}{branchMessage} (revision number {revNum})")
@@ -432,9 +453,9 @@ def commandSync_checkoutRepoByTimeStamp(repoInfo: dict, repoAbsPath: str, repoSt
     timestampsToShas = json.loads('{'+res["stdout"][0:-1]+'}')
     if (ts in timestampsToShas):
         sha = timestampsToShas[ts]
-        branch=defaultSyncPointBranchName
-        print(f"\r>> checking out {ts} ({date})...", end='', flush=True)
-        res = gitCommand(f"git checkout -B {branch} {sha}", 3, cwd=repoAbsPath, verbosity=verbosity)
+        branchParam, branchMessage = commandSync_branchParamAndMessage(repoInfo, repoAbsPath, sha)    
+        print(f"\r>> checking out {ts} ({date}){branchMessage}...", end='', flush=True)
+        res = gitCommand(f"git checkout {branchParam}{sha}", 3, cwd=repoAbsPath, verbosity=verbosity)
         if res["code"] == 0:
             revNum = getRevNumber(repoAbsPath)
             printWithVars2(f"{_green(repoString)}: successfully checked out revision by {method}: {ts} ({date}) {sha} (revision number {revNum})")
@@ -445,14 +466,14 @@ def commandSync_checkoutRepoByTimeStamp(repoInfo: dict, repoAbsPath: str, repoSt
         closestTimestamp = min(timestampsToShas, key=lambda x:abs(int(x)-int(ts)))
         closestDate = dateFromTimestamp(closestTimestamp)
         sha = timestampsToShas[closestTimestamp]
-        branch=defaultSyncPointBranchName
-        print(f"\r>> checking out close {ts} ({date})...", end='', flush=True)
-        res = gitCommand(f"git checkout -B {branch} {sha}", 3, cwd=repoAbsPath, verbosity=verbosity)
+        branchParam, branchMessage = commandSync_branchParamAndMessage(repoInfo, repoAbsPath, sha)    
+        print(f"\r>> checking out close {ts} ({date}){branchMessage}...", end='', flush=True)
+        res = gitCommand(f"git checkout {branchParam}{sha}", 3, cwd=repoAbsPath, verbosity=verbosity)
         if res["code"] == 0:
             revNum = getRevNumber(repoAbsPath)
             printWithVars2(f"\r{_yellow(repoString)}: warning checking out revision by closest timestamp.", "red")
-            printWithVars2(f"       requested {method}: {ts} ({date})")
-            printWithVars2(f"       used      {method}: {closestTimestamp} ({closestDate}) {sha} (revision number {revNum})")
+            printWithVars2(f"       requested {method}: {ts} ({date}){branchMessage}")
+            printWithVars2(f"       used      {method}: {closestTimestamp} ({closestDate}) {sha}{branchMessage} (revision number {revNum})")
             return True
     return failedToCheckOut()
 
