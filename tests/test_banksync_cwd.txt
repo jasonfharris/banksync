@@ -175,9 +175,10 @@ update client repos to master, and sync repo to syncPoint1
 >>> ans = execute4('git checkout {syncPoint1}', cwd='repoSyncFile')
 
 remove hashes from syncfile.json
->>> dict = repositories(loadSyncFileAsDict('repoSyncFile/syncfile.json'))
->>> del dict['repoFish']['sha']
->>> del dict['repoBird']['sha']
+>>> dict = loadSyncFileAsDict('repoSyncFile/syncfile.json')
+>>> repos = dict['repositories']
+>>> del repos['repoFish']['sha']
+>>> del repos['repoBird']['sha']
 >>> writeDictToSyncFile('repoSyncFile/syncfile.json', dict)
 
 verify that sync now correctly updates to the timestamps
@@ -192,11 +193,12 @@ checkout syncPoint2
 >>> ans = execute4('git checkout {syncPoint2}', cwd='repoSyncFile')
 
 remove hashes from syncfile.json and alter the UnixTimeStamps
->>> dict = repositories(loadSyncFileAsDict('repoSyncFile/syncfile.json'))
->>> del dict['repoFish']['sha']
->>> del dict['repoBird']['sha']
->>> dict['repoFish']['UnixTimeStamp'] = str(int(dict['repoFish']['UnixTimeStamp'])+1)
->>> dict['repoBird']['UnixTimeStamp'] = str(int(dict['repoBird']['UnixTimeStamp'])+1)
+>>> dict = loadSyncFileAsDict('repoSyncFile/syncfile.json')
+>>> repos = dict['repositories']
+>>> del repos['repoFish']['sha']
+>>> del repos['repoBird']['sha']
+>>> repos['repoFish']['UnixTimeStamp'] = str(int(repos['repoFish']['UnixTimeStamp'])+1)
+>>> repos['repoBird']['UnixTimeStamp'] = str(int(repos['repoBird']['UnixTimeStamp'])+1)
 >>> writeDictToSyncFile('repoSyncFile/syncfile.json', dict)
 
 confirm that we get no update unless if we allow only exact timestamps
