@@ -26,7 +26,7 @@ _config: dict                   # This is the configuration dictionary containin
 # Defines
 # --------------------------------------------------------------------------------------------------------------------------
 
-tryOrder = ["sha", "UnixTimeStamp"]
+tryOrder = ["sha", "UnixTimeStamp"] # The order in which we try to match a revision for the sync sub command
 defaultSyncPointBranchName = "syncPoint"
 
 
@@ -388,10 +388,78 @@ def getRepoAbsPath(syncFileAbsPath, offset, repo):
 # command "sync"
 # --------------------------------------------------------------------------------------------------------------------------
 
+def commandSync_checkoutRepoBySha(repoInfo: dict, repoAbsPath: str, repoString: str, method: str):
+    sha = repoInfo["sha"]
+    shortHash = sha[0:12]
+    if dryrun:
+        printWithVars2(f"{repoString}: would try and check out revision by {method}: {shortHash}", dryrun=False)
+        return True
+
+    branchName = repoInfo.get("branch", defaultSyncPointBranchName)
+    branchSha = getShaForBranchName(repoAbsPath, branchName)
+    branchParam = f"-B {branchName} " if (branchSha == sha) else ""
+    branchMessage = f" ({_grey('branch')}: {_blue(branchName)})".strip() if (branchSha == sha) else ""
+    
+    print(f"\r>> checking out {sha}{branchMessage}...", end='', flush=True)
+
+    res = gitCommand(f"git checkout {branchParam}{sha}", 3, cwd=repoAbsPath, verbosity=5)
+    if res["code"] == 0:
+        revNum = getRevNumber(repoAbsPath)
+        printWithVars2(f"\r{_green(repoString)}: successfully checked out revision by {method}: {shortHash}{branchMessage} (revision number {revNum})")
+        return True
+    printWithVars3(f"\r{repoString}: failed to check out revision by {method}: {sha}{branchMessage}")
+    return False
+
+def commandSync_checkoutRepoByTimeStamp(repoInfo: dict, repoAbsPath: str, repoString: str, method: str):
+    matching = _config['sync.matching']
+    if (matching != 'timestamp') and (matching != 'closetimestamp'):
+        return False
+
+    ts = repoInfo["UnixTimeStamp"]
+    date = dateFromTimestamp(ts)
+    if dryrun:
+        printWithVars2(f"{repoString}: would try and check out revision by {method}: {ts} ({date})", dryrun=False)
+        return True
+
+    def failedToCheckOut():
+        printWithVars3(f"\r{repoString}: failed to check out revision by {method}: {ts} ({date})")
+        return False
+
+    res = gitCommand("git log --all --format=format:'\"%at\" : \"%H\",'", 4, cwd=repoAbsPath, raiseOnFailure=True, verbosity=verbosity, permitShowingStdOut=False, permitShowingStdErr=False)
+    if res["code"] != 0:
+        return failedToCheckOut()
+
+    timestampsToShas = json.loads('{'+res["stdout"][0:-1]+'}')
+    if (ts in timestampsToShas):
+        sha = timestampsToShas[ts]
+        branch=defaultSyncPointBranchName
+        print(f"\r>> checking out {ts} ({date})...", end='', flush=True)
+        res = gitCommand(f"git checkout -B {branch} {sha}", 3, cwd=repoAbsPath, verbosity=verbosity)
+        if res["code"] == 0:
+            revNum = getRevNumber(repoAbsPath)
+            printWithVars2(f"{_green(repoString)}: successfully checked out revision by {method}: {ts} ({date}) {sha} (revision number {revNum})")
+            return True
+        return failedToCheckOut()
+
+    if matching == 'closetimestamp':
+        closestTimestamp = min(timestampsToShas, key=lambda x:abs(int(x)-int(ts)))
+        closestDate = dateFromTimestamp(closestTimestamp)
+        sha = timestampsToShas[closestTimestamp]
+        branch=defaultSyncPointBranchName
+        print(f"\r>> checking out close {ts} ({date})...", end='', flush=True)
+        res = gitCommand(f"git checkout -B {branch} {sha}", 3, cwd=repoAbsPath, verbosity=verbosity)
+        if res["code"] == 0:
+            revNum = getRevNumber(repoAbsPath)
+            printWithVars2(f"\r{_yellow(repoString)}: warning checking out revision by closest timestamp.", "red")
+            printWithVars2(f"       requested {method}: {ts} ({date})")
+            printWithVars2(f"       used      {method}: {closestTimestamp} ({closestDate}) {sha} (revision number {revNum})")
+            return True
+    return failedToCheckOut()
+
+
 def commandSync(syncFileAbsPath: str):
     syncInfo = loadSyncFileAsDict(syncFileAbsPath)
-    matching = _config['sync.matching']
-    syncDict : dict = repositories(syncInfo)
+    syncDict: dict = repositories(syncInfo)
     offset = relativePathToRepositories(syncInfo)
     allFound = True
 
@@ -405,64 +473,12 @@ def commandSync(syncFileAbsPath: str):
 
         found = False
         for method in tryOrder:
+            if (method == "sha") and ("sha" in repoInfo):
+                found = commandSync_checkoutRepoBySha(repoInfo, repoAbsPath, repoString, method)
+            if (method == "UnixTimeStamp") and ("UnixTimeStamp" in repoInfo):
+                found = commandSync_checkoutRepoByTimeStamp(repoInfo, repoAbsPath, repoString, method)
             if found:
                 break
-
-            if (method == "sha") and ("sha" in repoInfo):
-                sha = repoInfo["sha"]
-                shortHash = sha[0:12]
-                if dryrun:
-                    printWithVars2(f"{repoString}: would try and check out revision by {method}: {shortHash}", dryrun=False)
-                    break
-
-                print(f"\r>> checking out {sha}...", end='', flush=True)
-                res = gitCommand(f"git checkout -B {defaultSyncPointBranchName} {sha}", 3, cwd=repoAbsPath, verbosity=verbosity)
-                if res["code"] == 0:
-                    revNum = getRevNumber(repoAbsPath)
-                    printWithVars2(f"\r{_green(repoString)}: successfully checked out revision by {method}: {shortHash} (revision number {revNum})")
-                    found = True
-                    break
-                printWithVars3(f"\r{repoString}: failed to check out revision by {method}: {sha}")
-
-            if (method == "UnixTimeStamp") and ("UnixTimeStamp" in repoInfo):
-                if (matching == 'timestamp') or (matching == 'closetimestamp'):
-                    ts = repoInfo["UnixTimeStamp"]
-                    date = dateFromTimestamp(ts)
-                    if dryrun:
-                        printWithVars2(f"{repoString}: would try and check out revision by {method}: {ts} ({date})", dryrun=False)
-                        break
-
-                    res = gitCommand("git log --all --format=format:'\"%at\" : \"%H\",'", 4, cwd=repoAbsPath, raiseOnFailure=True, verbosity=verbosity, permitShowingStdOut=False, permitShowingStdErr=False)
-                    if res["code"] == 0:
-                        timestampsToShas = json.loads('{'+res["stdout"][0:-1]+'}')
-                        if (ts in timestampsToShas):
-                            if (matching == 'timestamp') or (matching == 'closetimestamp'):
-                                sha = timestampsToShas[ts]
-                                branch=defaultSyncPointBranchName
-                                print(f"\r>> checking out {ts} ({date})...", end='', flush=True)
-                                res = gitCommand(f"git checkout -B {branch} {sha}", 3, cwd=repoAbsPath, verbosity=verbosity)
-                                if res["code"] == 0:
-                                    revNum = getRevNumber(repoAbsPath)
-                                    printWithVars2(f"{_green(repoString)}: successfully checked out revision by {method}: {ts} ({date}) {sha} (revision number {revNum})")
-                                    found = True
-                                    break
-                        else:
-                            if matching == 'closetimestamp':
-                                closestTimestamp = min(timestampsToShas, key=lambda x:abs(int(x)-int(ts)))
-                                closestDate = dateFromTimestamp(closestTimestamp)
-                                sha = timestampsToShas[closestTimestamp]
-                                branch=defaultSyncPointBranchName
-                                print(f"\r>> checking out close {ts} ({date})...", end='', flush=True)
-                                res = gitCommand(f"git checkout -B {branch} {sha}", 3, cwd=repoAbsPath, verbosity=verbosity)
-                                if res["code"] == 0:
-                                    revNum = getRevNumber(repoAbsPath)
-                                    printWithVars2(f"\r{_yellow(repoString)}: warning checking out revision by closest timestamp.", "red")
-                                    printWithVars2(f"       requested {method}: {ts} ({date})")
-                                    printWithVars2(f"       used      {method}: {closestTimestamp} ({closestDate}) {sha} (revision number {revNum})")
-                                    found = True
-                                    break
-
-                    printWithVars3(f"\r{repoString}: failed to check out revision by {method}: {ts} {date}")
 
         if not found and not dryrun:
             allFound = False
@@ -562,7 +578,6 @@ def commandCreateSyncfile(syncFileAbsPath: str):
             printWithVars2(f"failure! not able to get the status of {repoName} at {repoAbsPath}", 'red')
             anyFailures = True
         dictOfRepoInfo[repoName] = newRepoInfo
-
 
     if not dictOfRepoInfo:
         printWithVars1(f"failure! syncfile {syncFilePath} not created.",'red',)

@@ -254,6 +254,11 @@ def getStagedCount(repoAbsPath):
         return 0
     return len(ans.split('\n'))
 
+def getShaForBranchName(repoAbsPath: str, branchName: str):
+    """Return the SHA-1 hash for the given branch name in the repository at the given path or None if not found."""
+    res = gitCommand(f"git rev-parse {branchName}", 4, cwd=repoAbsPath, verbosity=1)
+    ans = res['stdout'].strip()
+    return ans if isSha1Str(ans) else None
 
 
 # --------------------------------------------------------------------------------------------------------------------------
