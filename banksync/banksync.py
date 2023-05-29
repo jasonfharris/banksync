@@ -389,6 +389,9 @@ def _blue(text):
 def _grey(text):
     return '\033[2m'+text+"\033[00m" if _config['general.colorize'] else text
 
+def branchInfo(branchName):
+    return f"({_grey('branch')}: {_blue(branchName)})"
+
 
 def getRepoAbsPath(syncFileAbsPath, offset, repo):
     if os.path.isabs(repo):
@@ -410,7 +413,7 @@ def commandSync_branchParamAndMessage(repoInfo: dict, repoAbsPath: str, sha: str
     if branchName == 'HEAD':
         branchSha = 0
     branchParam = f"-B {branchName} " if (branchSha == sha) else ""
-    branchMessage = f" ({_grey('branch')}: {_blue(branchName)})" if (branchSha == sha) else ""
+    branchMessage = f" ({_grey('branch')}: {_blue(branchName)})"
     return branchParam, branchMessage
 
 def commandSync_checkoutRepoBySha(repoInfo: dict, repoAbsPath: str, repoString: str, method: str):
@@ -426,7 +429,8 @@ def commandSync_checkoutRepoBySha(repoInfo: dict, repoAbsPath: str, repoString: 
     res = gitCommand(f"git checkout {branchParam}{sha}", 3, cwd=repoAbsPath, verbosity=verbosity)
     if res["code"] == 0:
         revNum = getRevNumber(repoAbsPath)
-        printWithVars2(f"\r{_green(repoString)}: successfully checked out revision by {method}: {shortHash}{branchMessage} (revision number {revNum})")
+        currentBranch = branchInfo(getBranchName(repoAbsPath))
+        printWithVars2(f"\r{_green(repoString)}: successfully checked out revision by {method}: {shortHash} {currentBranch} (revision number {revNum})")
         return True
     printWithVars3(f"\r{repoString}: failed to check out revision by {method}: {sha}{branchMessage}")
     return False
@@ -471,9 +475,10 @@ def commandSync_checkoutRepoByTimeStamp(repoInfo: dict, repoAbsPath: str, repoSt
         res = gitCommand(f"git checkout {branchParam}{sha}", 3, cwd=repoAbsPath, verbosity=verbosity)
         if res["code"] == 0:
             revNum = getRevNumber(repoAbsPath)
+            currentBranch = branchInfo(getBranchName(repoAbsPath))
             printWithVars2(f"\r{_yellow(repoString)}: warning checking out revision by closest timestamp.", "red")
             printWithVars2(f"       requested {method}: {ts} ({date}){branchMessage}")
-            printWithVars2(f"       used      {method}: {closestTimestamp} ({closestDate}) {sha}{branchMessage} (revision number {revNum})")
+            printWithVars2(f"       used      {method}: {closestTimestamp} ({closestDate}) {sha} {currentBranch} (revision number {revNum})")
             return True
     return failedToCheckOut()
 
