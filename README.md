@@ -6,7 +6,6 @@
 
 You can install `banksync` from PyPi with a simple:
 
-
     pip install banksync
 
 ## Quick Start
@@ -47,21 +46,21 @@ Let's break down the quick start process into steps.
 2. Clone the demonstration syncrepo for the animals project using standard git:
 
    ```
-   git clone https://github.com/testbank/animalsSyncRepo.git
+   git clone https://github.com/testbank/animalsSyncRepo.git syncrepo
    ```
 
    This clones the thin repo, which records the syncfile over time. It tracks the state of the repos in the bank at different times or stages. The resulting hierarchy is:
 
    ```
    animals
-   └── animalsSyncRepo
+   └── syncrepo
        └── syncfile.json
    ```
 
 3. Populate the repositories in the bank:
 
    ```
-   cd animalsSyncRepo
+   cd syncrepo
    bank populate
    ```
 
@@ -69,23 +68,33 @@ Let's break down the quick start process into steps.
 
    ```
    animals
-   ├── animalsSyncRepo
-   │   └── syncfile.json
    ├── repoBird
-   │   └── Bird.txt
-   └── repoFish
-       └── Fish.txt
+   │   └── Bird.txt
+   ├── repoFish
+   │   └── Fish.txt
+   └── syncrepo
+       └── syncfile.json
    ```
 
-### issuing commands
+### Issuing Commands
 
-We can now issue commands across the repos in the bank. From the syncrepo we can execute:
+We can now issue commands across the repos in the bank. From the root directory we can execute:
 
-    cd ~/animals/animalsSyncRepo
+    cd ~/animals
     bank git status
 
-Which will execute the status command in each of the repos in the bank. If we want to checkout a previous state across the repos in the project we can do this via (from the syncrepo):
+Which will execute the status command in each of the repos in the bank. You can issue commands from anywhere
+in the project directory. The bank executable will look for a syncrepo in successive parent directories until it
+finds a syncrepo and it's syncfile. (If the bank executable doesn't find a syncfile the command will fail.) So
 
+    cd ~/animals/repoBird
+    bank git status
+
+will yield the exact same result as before.
+
+If we want to checkout a previous state across the repos in the project we can do this via (from the syncrepo):
+
+    cd ~/animals/syncrepo
     git checkout master~2
     bank sync
 
@@ -99,37 +108,50 @@ Which will do a `git checkout master` on all the repos in the bank including the
 
 The syncfile specifies which repositories are part of the bank, and what state the repositories should be synchronized to. A typical simple sync file might be the following
 
-    more ~/animals/animalsSyncRepo/syncfile.json
+    more ~/animals/syncrepo/syncfile.json
 
 Which yields:
 
-XXX update
 ```
 {
-    "repoFish" : {
-        "path" : "repoFish",
-        "sha" : "a27368bec17373938b1dcf73638945b89b60a9d0",
-        "UnixTimeStamp" : "1480517200",
-        "date" : "30 Nov 2016 - 15:46:40",
-        "author" : "Jason Harris",
-        "revisionNumber" : "3",
-        "message" : "committing salmon",
-        "cloneURL" : "https://github.com/testbank/repoFish.git"
-    },
-    "repoBird" : {
-        "path" : "repoBird",
-        "sha" : "6bf9d646b2aa224b64fb86cbddb4d7ab0f2e37d3",
-        "UnixTimeStamp" : "1480517200",
-        "date" : "30 Nov 2016 - 15:46:40",
-        "author" : "Jason Harris",
-        "revisionNumber" : "3",
-        "message" : "committing eagle",
-        "cloneURL" : "https://github.com/testbank/repoBird.git"
-    }
+   "configuration": {
+      "createdByBanksyncVersion": "0.9.10",
+      "requiredBanksyncVersion": "0.9.10",
+      "syncfileFormatVersion": "1.0",
+      "relativePathToRepositories": "..",
+      "clone.syncreponame": "syncrepo"
+   },
+   "repositories": {
+      "repoBird" : {
+         "path": "repoBird",
+         "sha": "6bf9d646b2aa224b64fb86cbddb4d7ab0f2e37d3",
+         "UnixTimeStamp": "1480517200",
+         "date": "2016-11-30 15:46:40 +0100",
+         "author": "Jason Harris",
+         "branch": "master",
+         "revisionNumber": "3",
+         "message": "committing eagle",
+         "cloneURL": "https://github.com/testbank/repoBird.git"
+      },
+      "repoFish": {
+         "path": "repoFish",
+         "sha": "a27368bec17373938b1dcf73638945b89b60a9d0",
+         "UnixTimeStamp": "1480517200",
+         "date": "2016-11-30 15:46:40 +0100",
+         "author": "Jason Harris",
+         "branch": "master",
+         "revisionNumber": "3",
+         "message": "committing salmon",
+         "cloneURL": "https://github.com/testbank/repoFish.git"
+      }
+   }
 }
 ```
 
-The syncfile should lie inside a git repo (the syncrepo). Whenever we want to record a configuration of the repos we simply alter the syncfile by transcribing the current state of the repos into the syncfile using `bank record_repos` with the appropriate options. We then use `git commit` to record this new state / configuration in the syncrepo.
+The syncfile should lie inside a git repo (the syncrepo). Whenever we want to record a configuration of the
+repos we simply alter the syncfile by transcribing the current state of the repos into the syncfile using
+`bank record_repos` with the appropriate options. We then use `git commit` to record this new state /
+configuration in the syncrepo (the syncrepo is a normal git repo).
 
 So let us add some content to repoBird in our example and then commit this change.
 
@@ -137,36 +159,46 @@ So let us add some content to repoBird in our example and then commit this chang
     echo "toucan" >> Bird.txt
     git commit -am "committing toucan"
 
-So now we can update the syncfile with the state of the current repos in the bank:
+So now we can update the syncfile with the state of the current repos in the bank (we can issue bank commands
+from anywhere within our project directory):
 
-    cd ~/animals/animalsSyncRepo/
     bank record_repos
 
 The contents of our syncfile will now be something like:
 
-XXX update
 ```
+
 {
-    "repoFish" : {
-        "path" : "repoFish",
-        "sha" : "a27368bec17373938b1dcf73638945b89b60a9d0",
-        "UnixTimeStamp" : "1480517200",
-        "date" : "30 Nov 2016 - 15:46:40",
-        "author" : "Jason Harris",
-        "revisionNumber" : "3",
-        "message" : "committing salmon",
-        "cloneURL" : "https://github.com/testbank/repoFish.git"
-    },
-    "repoBird" : {
-        "path" : "repoBird",
-        "sha" : "c8fb05947c5161e484104d99f427ec082fb4e85b",
-        "UnixTimeStamp" : "1480519159",
-        "date" : "30 Nov 2016 - 16:19:19",
-        "author" : "Jason Harris",
-        "revisionNumber" : "4",
-        "message" : "committing toucan",
-        "cloneURL" : "https://github.com/testbank/repoBird.git"
-    }
+   "configuration": {
+      "createdByBanksyncVersion": "0.9.10",
+      "requiredBanksyncVersion": "0.9.10",
+      "syncfileFormatVersion": "1.0",
+      "relativePathToRepositories": "..",
+      "clone.syncreponame": "syncrepo"
+   },
+   "repositories": {
+      "repoBird" : {
+         "path" : "repoBird",
+         "sha" : "c8fb05947c5161e484104d99f427ec082fb4e85b",
+         "UnixTimeStamp" : "1480519159",
+         "date" : "2016-11-30 - 16:19:19",
+         "author" : "Jason Harris",
+         "revisionNumber" : "4",
+         "message" : "committing toucan",
+         "cloneURL" : "https://github.com/testbank/repoBird.git"
+      },
+      "repoFish": {
+         "path": "repoFish",
+         "sha": "a27368bec17373938b1dcf73638945b89b60a9d0",
+         "UnixTimeStamp": "1480517200",
+         "date": "2016-11-30 15:46:40 +0100",
+         "author": "Jason Harris",
+         "branch": "master",
+         "revisionNumber": "3",
+         "message": "committing salmon",
+         "cloneURL": "https://github.com/testbank/repoFish.git"
+      }
+   }
 }
 ```
 
@@ -179,12 +211,13 @@ So we could now record this new overall state of the repos in the bank via simpl
 ## Locations
 
 How does the bank command determine the locations for `repoBird` and `repoFish`, as well as the appropriate
-syncfile to use? The paths are stored in the syncfile itself (along with other information). In this example, two key
-options are present: `cwd=..` and `syncfile=syncfile.json`.
+syncfile to use? The paths are stored in the syncfile itself (along with other information). So all the paths
+are relative to the syncfile.
 
-The cwd (Change Working Directory) option indicates the relative path where repo commands should be executed. In this case, it is one level above our current working directory. Given that the syncfile is located in `~/animals/animalsSyncRepo`, this means that the repo paths will originate from `~/animals/`. For example, the path for "Birds" in the syncfile is simply `repoBird`. Relative to `animals/animalsSyncRepo`, and considering the `cwd` of `..`, we can determine the repo path for "birds". This is calculated as `animals/animalsSyncRepo` + `..` + `repoBird`, resulting in `animals/repoBird`, which is the storage location for the "Birds" repo.
+The `relativePathToRepositories` configuration option indicates the relative path where repo commands should be executed. In this case, it is one level above our current working directory. Given that the syncfile is located in `~/animals/syncrepo`, this means that the repo paths will originate from `~/animals/`. For example, the path for "Birds" in the syncfile is simply `repoBird`. Relative to `animals/syncrepo`, and considering the `relativePathToRepositories` of `..`, we can determine the repo path for "birds". This is calculated as `animals/syncrepo` + `..` + `repoBird`, resulting in `animals/repoBird`, which is the storage location for the "Birds" repo.
 
-The second option just tells us what the name of the syncfile is. We could have called it `earthanimals.json` if we wanted to.
+Note if we wanted to we could have used a different name for the syncrepo and indeed a different name for the
+syncfile. We could have called the syncfile `earthanimals.json` if we wanted to.
 
 ## Bank command line options
 
@@ -192,7 +225,11 @@ The command line tool `bank` has several options which can be specified:
 
 #### --syncfile <path>
 
-The `syncfile` option specifies a syncfile. The syncfile contents specify which repos are part of the bank. The various keys which are recorded if present are:`path`, `sha`, `UnixTimeStamp`, `date`, `author`, `revisionNumber`, `message`, and `cloneURL`. Adding other keys at present will not effect or change the behavior of the bank tool so you can add other info as you see fit / want to each of the recorded states in the various repos.
+The `syncfile` option specifies a syncfile. The syncfile contents specify which repos are part of the bank.
+The various keys which are recorded if present are:`path`, `sha`, `UnixTimeStamp`, `date`, `author`,
+`revisionNumber`, `message`, `branch`, and `cloneURL`. Adding other keys at present will not effect or change
+the behavior of the bank tool so you can add other info as you see fit / want to each of the recorded states
+in the various repos.
 
 #### --dryrun
 
@@ -218,10 +255,6 @@ When attempting to sync the constituent repos to the versions specified in the s
 
 The sync file itself contains a 'configuration' section where you can specify prevailing options. So the above example would become:
 
-    cd animals/animalsSyncRepo
-    bank record_repos
-    git commit -am "recording the latest state of the repos in animals."
-
 ## Commands
 
 The form of a bank command is `bank <cmd> <opts>` where `<cmd>` is one of `sync`, `record_repos`, `create_syncfile`, `bisect`, `populate`,  `git` or `gitall` 
@@ -234,10 +267,10 @@ The form of a bank command is `bank <cmd> <opts>` where `<cmd>` is one of `sync`
 
 This would checkout / update the repos given in the syncfile `syncfile.json` to the states given in the syncfile. It each repo it tries to checkout the version first by the given sha, and then it falls back to the given timestamp, and then it falls back to the closest timestamp. (This fallback behavior can be controlled by the `--matching` option.)
 
-    bank sync --syncfile syncfile.json --cwd ../other/dir
+    bank sync --syncfile other/dir/syncfile.json
 
-This would checkout / update the repos given in the syncfile to the states given in the syncfile
-(but the path to each repo in the bank will be prefixed by the value of the `--cwd` option `../other/dir`).
+This would checkout / update the repos given in the specified syncfile to the states given in the syncfile.
+(The repos are relative to the syncfile.)
 
 #### bank record_repos <opts>
 
