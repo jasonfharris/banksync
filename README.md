@@ -1,6 +1,12 @@
 ## Purpose
 
-`banksync` is a command line tool that simplifies the use of git commands across a "bank" or "collection" of repositories. It enables synchronization of historical configurations throughout the bank of repos.
+`banksync` is a command line tool that simplifies the use of git commands across a "bank" or "collection" of
+repositories. It enables synchronization of historical configurations throughout the bank of repos.
+Simplistically an example might look like:
+
+![Diagramtic representation of banksync](documentation/BanksyncFunctioning.png)
+
+In simplistic terms each commit in the syncrepo corresponds to a configuration or state of the constituent repos.
 
 ## Installation
 
@@ -17,7 +23,7 @@ To quickly clone and populate the example collection of repos, use the following
     cd ~
     bank clone https://github.com/testbank/animalsSyncRepo.git animals
 
-This will git clone the thin syncrepo, which contains the syncfile, and then populate all constituent repos. The resulting structure will be:
+This will git clone the thin syncrepo, which contains the syncfile, and then populate all the constituent repos. The resulting structure will be:
 
     animals
     ├── repoBird
@@ -32,7 +38,7 @@ Let's walk quickly through what is happening
 
 ### Step-by-step Walkthrough
 
-Let's break down the quick start process into steps.
+Let's recreate this quick start process by breaking down the underlying steps.
 
 1. Create a directory `animals`:
 
@@ -60,7 +66,6 @@ Let's break down the quick start process into steps.
 3. Populate the repositories in the bank:
 
    ```
-   cd syncrepo
    bank populate
    ```
 
@@ -90,7 +95,7 @@ finds a syncrepo and it's syncfile. (If the bank executable doesn't find a syncf
     cd ~/animals/repoBird
     bank git status
 
-will yield the exact same result as before.
+will yield the exact same result as before (since we are still within the same project directory).
 
 If we want to checkout a previous state across the repos in the project we can do this via (from the syncrepo):
 
@@ -214,7 +219,15 @@ How does the bank command determine the locations for `repoBird` and `repoFish`,
 syncfile to use? The paths are stored in the syncfile itself (along with other information). So all the paths
 are relative to the syncfile.
 
-The `relativePathToRepositories` configuration option indicates the relative path where repo commands should be executed. In this case, it is one level above our current working directory. Given that the syncfile is located in `~/animals/syncrepo`, this means that the repo paths will originate from `~/animals/`. For example, the path for "Birds" in the syncfile is simply `repoBird`. Relative to `animals/syncrepo`, and considering the `relativePathToRepositories` of `..`, we can determine the repo path for "birds". This is calculated as `animals/syncrepo` + `..` + `repoBird`, resulting in `animals/repoBird`, which is the storage location for the "Birds" repo.
+The `relativePathToRepositories` configuration option indicates the relative path where repo commands should
+be executed. In this case, it is one level above our current working directory. Given that the syncfile is
+located in `~/animals/syncrepo`, this means that the repo paths will originate from `~/animals/`. For example,
+the path for the "birds" repo in the syncfile is simply `repoBird`. Relative to `animals/syncrepo`, and considering
+the `relativePathToRepositories` of `..`, we can determine the repo path for "birds". This is calculated as
+`animals/syncrepo` + `..` + `repoBird`, resulting in `animals/repoBird`, which is the storage location for the
+"birds" repo.
+
+The layout of the constituent repos can be nested, or be side by side, or in any combination or relative location. Paths are typically relative but can be absolute.
 
 Note if we wanted to we could have used a different name for the syncrepo and indeed a different name for the
 syncfile. We could have called the syncfile `earthanimals.json` if we wanted to.
@@ -261,32 +274,45 @@ The form of a bank command is `bank <cmd> <opts>` where `<cmd>` is one of `sync`
 
 #### bank sync <opts>
 
-`sync` will update / checkout the revisions specified in the syncfile for each of the repos specified in the bank.
+`sync` will update / checkout the revisions specified in the prevaling syncfile for each of the repos specified in the bank.
+
+    bank sync
+
+This would find the prevaling syncfile, and then checkout / update the repos given in the prevailing syncfile to the states given in the syncfile. For each repo it tries to checkout the version first by the given sha, and then it falls back to the given timestamp, and then it falls back to the closest timestamp. (This fallback behavior can be controlled by the `--matching` option.)
 
     bank sync --syncfile syncfile.json
 
-This would checkout / update the repos given in the syncfile `syncfile.json` to the states given in the syncfile. It each repo it tries to checkout the version first by the given sha, and then it falls back to the given timestamp, and then it falls back to the closest timestamp. (This fallback behavior can be controlled by the `--matching` option.)
+This would use the specificed syncfile `syncfile.json` to the states given in the syncfile. For each repo it tries to checkout the version first by the given sha, and then it falls back to the given timestamp, and then it falls back to the closest timestamp. (This fallback behavior can be controlled by the `--matching` option.)
 
     bank sync --syncfile other/dir/syncfile.json
 
-This would checkout / update the repos given in the specified syncfile to the states given in the syncfile.
-(The repos are relative to the syncfile.)
+This would use the specificed syncfile `other/dir/syncfile.json` as the syncfile. All the repos are then located relative to the
+syncfile repo (the parent directory to the syncfile).
 
 #### bank record_repos <opts>
 
 `record_repos` is used to transcribe the current state of the repos into the syncfile. Eg:
 
-    bank record_repos --syncfile syncfile.json
+    bank record_repos
 
 This would alter the contents of the syncfile and change the revisions stored in the syncfile.json to match the current revisions of the referenced repositories.
+
+    bank record_repos --syncfile other/dir/syncfile.json
+
+This would use the specificed syncfile `other/dir/syncfile.json` as the syncfile. All the repos are then located relative to the
+syncfile repo (the parent directory to the syncfile).
 
 #### bank create_syncfile <opts>
 
 `create_syncfile` is used to generate an initial syncfile. Eg:
 
-    bank create_syncfile --syncfile syncfile.json repo1 repo2 ... repoN --cwd some/dir
+    bank create_syncfile --syncfile syncfile.json repo1 repo2 ... repoN
 
 This would generate or overwrite the syncfile.json to contain sync points for the current states of `repo1`, `repo2`, ... `repoN`
+
+    bank create_syncfile --syncfile other/dir/syncfile.json some/path/repo1 another/path/repo2 ... other/path/repoN
+
+This would generate or overwrite the syncfile at `other/dir/syncfile.json` to point to the specified repos.
 
 #### bank create_syncrepo <opts>
 
