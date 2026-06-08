@@ -182,7 +182,7 @@ def isGitWorkingTreeDir(absPath):
         return False
 
     process = subprocess.Popen(
-        ["git", "rev-parse", "--is-inside-work-tree"],
+        ["git", "rev-parse", "--show-toplevel"],
         cwd=absPath,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
@@ -191,7 +191,10 @@ def isGitWorkingTreeDir(absPath):
     if isinstance(stdout, bytes):
         stdout = stdout.decode(errors="replace")
 
-    return process.returncode == 0 and stdout.strip() == "true"
+    if process.returncode != 0:
+        return False
+
+    return os.path.abspath(stdout.strip()) == os.path.abspath(absPath)
 
 
 def checkForSyncRepoDir(syncFileAbsPath, existing = True):
