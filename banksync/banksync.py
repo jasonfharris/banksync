@@ -1009,8 +1009,8 @@ def isJsonFileASyncFile(jsonFileAbsPath):
 
 
 def findSyncFileInDir(absDirectory):
-    # Check if the directory contains a '.git' directory
-    if not os.path.isdir(os.path.join(absDirectory, '.git')):
+    # Worktrees use a .git file instead of a .git directory, so ask Git.
+    if not isGitWorkingTreeDir(absDirectory):
         return None
 
     # Check if the directory contains any files ending in '.json'

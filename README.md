@@ -358,8 +358,8 @@ Will perform a `git status` operation on each of the repositories in the bank an
 
 ## Testing
 
-To run the test suite you need `py.test` installed on your machine. Then after downloading the source code you can simply execute:
+To run the test suite on Python 3.12, install the dev requirements and run pytest:
 
+    pip install -r requirements-dev.txt
     cd banksync_Package
-    py.test
-
+    python -m pytest

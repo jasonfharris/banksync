@@ -8,6 +8,7 @@ import tempfile
 import re
 import glob
 import json
+import subprocess
 from sysexecute import *
 import datetime
 import configparser
@@ -166,7 +167,7 @@ def checkForRepo(repoString, repoAbsPath):
     if not os.path.isdir(repoAbsPath):
         printWithVars1(f"{repoString} : there is no repository at {repoAbsPath}.", 'red')
         return False
-    if not os.path.isdir(os.path.join(repoAbsPath,".git")):
+    if not isGitWorkingTreeDir(repoAbsPath):
         printWithVars1(f"{repoString} : {repoAbsPath} is not a git repository.", 'red')
         return False
     return True
@@ -176,13 +177,30 @@ def checkForSyncRepoFile(syncFileAbsPath):
         printWithVars1(f"failure! could not locate the sync file at {syncFileAbsPath}.", 'red')
         sys.exit(1)
 
+def isGitWorkingTreeDir(absPath):
+    if not os.path.isdir(absPath):
+        return False
+
+    process = subprocess.Popen(
+        ["git", "rev-parse", "--is-inside-work-tree"],
+        cwd=absPath,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+    stdout, _ = process.communicate()
+    if isinstance(stdout, bytes):
+        stdout = stdout.decode(errors="replace")
+
+    return process.returncode == 0 and stdout.strip() == "true"
+
+
 def checkForSyncRepoDir(syncFileAbsPath, existing = True):
     syncRepoAbsPath = os.path.dirname(syncFileAbsPath)
     if not os.path.isdir(syncRepoAbsPath):
         printWithVars1(f"failure! could not locate the syncrepo dir at {syncRepoAbsPath}.", 'red')
         sys.exit(1)
 
-    if not os.path.isdir(os.path.join(syncRepoAbsPath,".git")):
+    if not isGitWorkingTreeDir(syncRepoAbsPath):
         if existing:
             printWithVars1(f"failure! {syncRepoAbsPath} is not a git repository consisting of syncfile revisions.", 'red')
         else:
@@ -449,4 +467,3 @@ def dictFromCurrentRepoState(repoPath, repoAbsPath, **kwargs):
         succeeded = False
 
     return (succeeded, newRepoInfo)
-
