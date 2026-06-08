@@ -918,12 +918,14 @@ def distributeGitCommand(syncFileAbsPath: str):
             anyFailures = True
             continue
         opts['cwd'] = repoAbsPath
-        gitCommand(gitCmd, 2, **opts);
+        repoGitCmd = gitPullCommandForRepo(repoAbsPath, remainingArgs) if command == 'pull' else gitCmd
+        gitCommand(repoGitCmd, 2, **opts);
         printWithVars2(gitRepoSeperatorString, dryrun=False)
     if includeSyncRepo:
         syncRepoAbsPath = os.path.dirname(syncFileAbsPath)
         opts['cwd'] = syncRepoAbsPath
-        gitCommand(gitCmd, 2, **opts);
+        repoGitCmd = gitPullCommandForRepo(syncRepoAbsPath, remainingArgs) if command == 'pull' else gitCmd
+        gitCommand(repoGitCmd, 2, **opts);
         printWithVars2(gitRepoSeperatorString, dryrun=False)
 
     syncFilePath = os.path.relpath(syncFileAbsPath, os.getcwd())

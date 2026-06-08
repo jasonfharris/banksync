@@ -256,6 +256,76 @@ def getBranchName(repoAbsPath):
     res = gitCommand("git rev-parse --abbrev-ref HEAD", 4, cwd=repoAbsPath, verbosity=1)
     return res['stdout'].strip()
 
+def getRemoteNames(repoAbsPath):
+    """Return the configured remote names for the repository at the given path."""
+    res = gitCommand("git remote", 4, cwd=repoAbsPath, verbosity=1)
+    return [remote.strip() for remote in res['stdout'].splitlines() if remote.strip()]
+
+def getDefaultRemoteName(repoAbsPath):
+    """Return origin if configured, otherwise the first configured remote."""
+    remotes = getRemoteNames(repoAbsPath)
+    if 'origin' in remotes:
+        return 'origin'
+    return remotes[0] if remotes else None
+
+def getRemoteHeadBranchName(repoAbsPath, remoteName):
+    """Return the branch name referenced by refs/remotes/<remoteName>/HEAD."""
+    res = gitCommand(f"git symbolic-ref --quiet --short refs/remotes/{remoteName}/HEAD", 4, cwd=repoAbsPath, verbosity=1)
+    remoteHead = res['stdout'].strip()
+    prefix = f"{remoteName}/"
+    if remoteHead.startswith(prefix):
+        return remoteHead[len(prefix):]
+    return None
+
+def hasLocalBranch(repoAbsPath, branchName):
+    """Return whether the repository has a local branch with the given name."""
+    res = gitCommand(f"git show-ref --verify --quiet refs/heads/{branchName}", 4, cwd=repoAbsPath, verbosity=1)
+    return res['code'] == 0
+
+def hasRemoteBranch(repoAbsPath, remoteName, branchName):
+    """Return whether the repository has a remote-tracking branch with the given name."""
+    res = gitCommand(f"git show-ref --verify --quiet refs/remotes/{remoteName}/{branchName}", 4, cwd=repoAbsPath, verbosity=1)
+    return res['code'] == 0
+
+def getDefaultPullBranch(repoAbsPath, remoteName):
+    """Return a default branch suitable for pulling while detached, if one exists."""
+    remoteHeadBranch = getRemoteHeadBranchName(repoAbsPath, remoteName)
+    if remoteHeadBranch and hasRemoteBranch(repoAbsPath, remoteName, remoteHeadBranch):
+        return remoteHeadBranch
+
+    for branchName in ['main', 'master']:
+        if hasRemoteBranch(repoAbsPath, remoteName, branchName):
+            return branchName
+
+    for branchName in ['main', 'master']:
+        if hasLocalBranch(repoAbsPath, branchName):
+            return branchName
+
+    return None
+
+def gitPullCommandForRepo(repoAbsPath, remainingArgs):
+    """Return the git pull command to run for this repo.
+
+    Bare `git pull` fails in detached HEAD because Git has no branch config to
+    consult. In that case, pull from the repository's default main/master
+    branch explicitly.
+    """
+    if remainingArgs:
+        return "git pull " + " ".join(remainingArgs)
+
+    if getBranchName(repoAbsPath) != 'HEAD':
+        return "git pull"
+
+    remoteName = getDefaultRemoteName(repoAbsPath)
+    if not remoteName:
+        return "git pull"
+
+    branchName = getDefaultPullBranch(repoAbsPath, remoteName)
+    if not branchName:
+        return "git pull"
+
+    return f"git pull {remoteName} {branchName}"
+
 def getModifiedCount(repoAbsPath):
     """Return the count of modified files in the repository at the given path."""
     res = gitCommand("git ls-files --modified --exclude-standard --directory", 4, cwd=repoAbsPath, verbosity=1)
