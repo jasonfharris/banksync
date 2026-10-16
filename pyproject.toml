@@ -12,7 +12,6 @@ authors = [{ name = "Jason Harris", email = "jason@jasonfharris.com" }]
 requires-python = ">=3.12"
 dependencies = [
     "argcomplete>=3",
-    "sysexecute>=1.1.6",
 ]
 keywords = ["git", "submodule", "multi-repo", "repositories", "bisect", "sync"]
 classifiers = [
@@ -51,7 +50,7 @@ packages = ["banksync"]
 
 [tool.setuptools.dynamic]
 # Read statically from the module, so building does not import banksync or its dependencies.
-version = { attr = "banksync.banksync.__version__" }
+version = { attr = "banksync.version.__version__" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -59,3 +58,8 @@ addopts = "-ra"
 markers = [
     "network: needs access to github.com; skipped unless BANKSYNC_NETWORK_TESTS=1",
 ]
+
+[tool.mypy]
+strict = true
+files = ["banksync", "tests"]
+mypy_path = "tests"

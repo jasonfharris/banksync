@@ -188,6 +188,18 @@ def test_git_runs_in_each_repo_and_gitall_also_in_the_syncrepo(animals: Animals,
     assert ws.head("repoSyncFile") == sp3
 
 
+def test_git_arguments_with_spaces_braces_and_quotes_reach_git_unchanged(animals: Animals) -> None:
+    ws = animals.ws
+    # Under sysexecute, `{0}` was treated as a format field and the command failed with "unbound variables".
+    output = animals.bank("explicit", "git", "log", "-1", "--format=%H", "HEAD@{0}")
+    assert animals.fish[2] in output and animals.bird[2] in output
+
+    message = 'a "quoted" {braced} message'
+    animals.bank("explicit", "git", "commit", "--allow-empty", "-m", message)
+    assert ws.git("repoFish", "log", "-1", "--format=%s") == message
+    assert ws.git("repoBird", "log", "-1", "--format=%s") == message
+
+
 def test_status_reports_branch_and_modified_and_staged_counts(animals: Animals) -> None:
     ws = animals.ws
     (ws.path("repoFish") / "Fish.txt").write_text("changed\n")

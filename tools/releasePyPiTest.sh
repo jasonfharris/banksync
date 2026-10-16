@@ -7,7 +7,7 @@ set -euo pipefail
 # Requirements:
 #   - ~/.pypirc contains a [testpypi] entry, or Twine credentials are supplied
 #     via environment variables / interactive prompt.
-#   - banksync/banksync.py has a new __version__; TestPyPI will reject reused
+#   - banksync/version.py has a new __version__; TestPyPI will reject reused
 #     versions just like PyPI.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -19,12 +19,12 @@ cd "${REPO_ROOT}"
 VERSION="$("${PYTHON_BIN}" - <<'PY'
 from pathlib import Path
 
-for line in Path("banksync/banksync.py").read_text().splitlines():
+for line in Path("banksync/version.py").read_text().splitlines():
     if line.startswith("__version__"):
         print(line.split("=", 1)[1].strip().strip("\"'"))
         break
 else:
-    raise SystemExit("Could not find __version__ in banksync/banksync.py")
+    raise SystemExit("Could not find __version__ in banksync/version.py")
 PY
 )"
 
