@@ -8,6 +8,7 @@ dynamic = ["version"]
 description = "Synchronize, record, bisect and run git commands across a bank (collection) of git repositories"
 readme = "README.md"
 license = "MIT"
+license-files = ["documentation/LICENSE.txt"]
 authors = [{ name = "Jason Harris", email = "jason@jasonfharris.com" }]
 requires-python = ">=3.12"
 dependencies = [

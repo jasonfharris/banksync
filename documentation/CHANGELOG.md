@@ -12,6 +12,8 @@ Requirements and packaging:
   `bank` / `banksync` are console-script entry points. `python -m banksync` runs a checkout without installing it.
 - The sysexecute dependency is removed. Commands run through banksync/shell.py, which passes arguments to git without a
   shell or format-string substitution, so arguments such as `HEAD@{0}`, `@{u}`, quotes and spaces reach git unchanged.
+- The license is MIT throughout: documentation/LICENSE.txt now contains the MIT License (it held BSD-3-Clause text
+  while the package metadata said MIT) and is included in the built distributions.
 - The code is split into typed modules (console, shell, git, syncfile, options, commands) and is `mypy --strict` clean.
 
 Behaviour:

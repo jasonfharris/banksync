@@ -498,3 +498,7 @@ The tests build their repositories in temporary directories and need no network 
 Quick Start example from GitHub is skipped unless `BANKSYNC_NETWORK_TESTS=1` is set.
 
 `python -m banksync` runs the code in a checkout without installing it.
+
+## License
+
+banksync is released under the MIT License; see [documentation/LICENSE.txt](documentation/LICENSE.txt).
