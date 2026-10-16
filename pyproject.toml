@@ -1,6 +1,58 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
-]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "banksync"
+dynamic = ["version"]
+description = "Synchronize, record, bisect and run git commands across a bank (collection) of git repositories"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Jason Harris", email = "jason@jasonfharris.com" }]
+requires-python = ">=3.12"
+dependencies = [
+    "argcomplete>=3",
+    "sysexecute>=1.1.6",
+]
+keywords = ["git", "submodule", "multi-repo", "repositories", "bisect", "sync"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Version Control :: Git",
+    "Topic :: Utilities",
+    "Typing :: Typed",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+bank = "banksync.banksync:main"
+banksync = "banksync.banksync:main"
+
+[project.urls]
+Homepage = "https://github.com/jasonfharris/banksync"
+Changelog = "https://github.com/jasonfharris/banksync/blob/master/documentation/CHANGELOG.md"
+
+[tool.setuptools]
+packages = ["banksync"]
+
+[tool.setuptools.dynamic]
+# Read statically from the module, so building does not import banksync or its dependencies.
+version = { attr = "banksync.banksync.__version__" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

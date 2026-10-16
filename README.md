@@ -358,8 +358,10 @@ Will perform a `git status` operation on each of the repositories in the bank an
 
 ## Testing
 
-To run the test suite on Python 3.12, install the dev requirements and run pytest:
+banksync requires Python 3.12 or later. To run the test suite, install the package in editable mode with the
+development extras and run pytest from the package directory:
 
-    pip install -r requirements-dev.txt
     cd banksync_Package
-    python -m pytest
+    python3 -m venv .venv
+    .venv/bin/pip install -e '.[dev]'
+    .venv/bin/python -m pytest
