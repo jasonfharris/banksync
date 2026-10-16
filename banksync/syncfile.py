@@ -155,7 +155,7 @@ def is_syncfile(path: Path, current_version: str) -> bool:
         )
 
     # An old style syncfile: a mapping from repo names to repo entries.
-    return all(isinstance(value, dict) and "UnixTimeStamp" in value for value in data.values())
+    return bool(data) and all(isinstance(value, dict) and "UnixTimeStamp" in value for value in data.values())
 
 
 def find_syncfile_in(directory: Path, current_version: str) -> Path | None:
@@ -203,8 +203,3 @@ def locate_syncfile(syncfile_arg: str | None, current_version: str) -> Path:
     check_syncfile_and_syncrepo(found)
     return found
 
-
-def find_syncfile_named_like(directory: Path) -> Path | None:
-    """The syncfile directly inside `directory` named `syncfile.*`, as created by default."""
-    matches = sorted(directory.glob("syncfile.*"))
-    return matches[0] if matches else None

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import sys
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -12,11 +14,13 @@ from .console import Level, console
 from .git import RepoInfo
 from .options import Options
 from .shell import git as run_git
+from .shell import git_output
 from .syncfile import (
     SyncFile,
     check_repo,
     check_syncrepo_dir,
-    find_syncfile_named_like,
+    find_syncfile_below,
+    find_syncfile_in,
     write_syncfile,
 )
 from .util import (
@@ -31,10 +35,11 @@ from .util import (
 from .version import REQUIRED_BANKSYNC_VERSION, SYNCFILE_FORMAT_VERSION, __version__
 
 DEFAULT_SYNC_POINT_BRANCH = "syncPoint"  # the branch used by --syncBranches when the syncfile records no branch
-BISECT_RESTORE_FILE = ".bisectRestore"
 
 
 def branch_info(branch: str) -> str:
+    if branch == "HEAD":
+        return f"({console.dim('detached HEAD')})"
     return f"({console.dim('branch')}: {console.blue(branch)})"
 
 
@@ -159,6 +164,8 @@ def sync(syncfile: SyncFile, opts: Options) -> bool:
 
 
 def record_repos(syncfile: SyncFile, opts: Options) -> bool:
+    """Record the commit each repository has checked out in the syncfile. Keys that banksync does not write itself
+    (notes and the like) are kept."""
     repos = syncfile.repositories
     recorded = dict(repos)
     any_failures = False
@@ -170,12 +177,12 @@ def record_repos(syncfile: SyncFile, opts: Options) -> bool:
             continue
 
         state = git.current_state(repo, info["path"])
-        if state:
-            console.say(f"{console.green(label)}: recording bank sync state of {state['sha'][:12]}, {state['date']}.")
-        else:
+        if not state:
             console.say(console.red(f"{label}: failure! not able to get the status of {name} at {repo}"))
             any_failures = True
-        recorded[name] = state or {"path": info["path"]}
+            continue
+        console.say(f"{console.green(label)}: recording bank sync state of {state['sha'][:12]}, {state['date']}.")
+        recorded[name] = {**info, **state}
 
     if opts.dryrun:
         return True
@@ -197,6 +204,9 @@ def record_repos(syncfile: SyncFile, opts: Options) -> bool:
 
 
 def create_syncfile(syncfile_path: Path, repo_args: Sequence[str], opts: Options) -> bool:
+    """Write a new syncfile recording the commit each of the given repositories has checked out.
+
+    The syncfile is only written if the state of every repository could be recorded."""
     syncrepo = syncfile_path.parent
     check_syncrepo_dir(syncrepo, existing=False)
     where = relative_to_cwd(syncfile_path)
@@ -212,16 +222,20 @@ def create_syncfile(syncfile_path: Path, repo_args: Sequence[str], opts: Options
             any_failures = True
             continue
 
+        if name in locations:
+            raise BanksyncError(
+                f"failure! {locations[name][0]} and {repo} are both named {name}; the repos in a bank need distinct names."
+            )
         locations[name] = (repo, os.path.isabs(arg))
         state = git.current_state(repo, arg)
-        if state:
-            console.say(f"{console.green(padded(name, names))}: recording repository state of {state['sha'][:12]}, {state['date']}.")
-        else:
+        if not state:
             console.say(console.red(f"failure! not able to get the status of {name} at {repo}"))
             any_failures = True
-        infos[name] = state or {"path": arg}
+            continue
+        console.say(f"{console.green(padded(name, names))}: recording repository state of {state['sha'][:12]}, {state['date']}.")
+        infos[name] = state
 
-    if not infos:
+    if any_failures or not infos:
         console.failure(f"failure! syncfile {where} not created.")
         return False
 
@@ -255,19 +269,17 @@ def create_syncfile(syncfile_path: Path, repo_args: Sequence[str], opts: Options
         return True
 
     write_syncfile(syncfile_path, data)
-    if any_failures:
-        console.failure(f"failure! not all repos had their state recorded to {where}.")
-        return False
     console.success(f"success! all repos had their state recorded to {where}.")
     return True
 
 
 def create_syncrepo(repo_args: Sequence[str], opts: Options) -> bool:
+    """Create the syncrepo directory, initialize a git repository there, and create the syncfile inside it."""
     syncrepo = Path(os.path.abspath(opts.syncreponame))
     syncfilename = opts.syncfilename
     if not os.path.dirname(syncfilename):
         syncfile_path = syncrepo / syncfilename
-    elif Path(os.path.abspath(syncfilename)) == syncrepo:
+    elif Path(os.path.abspath(syncfilename)).parent == syncrepo:
         syncfile_path = Path(os.path.abspath(syncfilename))
     else:
         raise BanksyncError(f"failure! sync file name: {syncfilename} does not live directly inside {opts.syncreponame}.")
@@ -285,116 +297,185 @@ def create_syncrepo(repo_args: Sequence[str], opts: Options) -> bool:
 
     syncrepo.mkdir(parents=True)
     run_git("init", "--quiet", cwd=syncrepo, check=True)
-    return create_syncfile(syncfile_path, repo_args, opts)
+    if create_syncfile(syncfile_path, repo_args, opts):
+        return True
+    shutil.rmtree(syncrepo)  # remove the empty syncrepo again, so the command can simply be rerun
+    return False
 
 
 # --------------------------------------------------------------------------------------------------------------------
 # bisect
 # --------------------------------------------------------------------------------------------------------------------
 
+BISECT_RESTORE_NAME = "banksync-bisect-restore.json"
+LEGACY_BISECT_RESTORE_FILE = ".bisectRestore"  # where banksync 0.9.10 kept it, in the syncrepo's working tree
 
-def _write_bisect_restore(syncrepo: Path, restore: dict[str, str]) -> None:
-    (syncrepo / BISECT_RESTORE_FILE).write_text(json.dumps(restore, indent=4))
+
+def _bisect_restore_paths(syncrepo: Path) -> list[Path]:
+    """Where the revisions to restore after bisecting are kept: inside the syncrepo's git directory, so that the file
+    does not show up as an untracked file, followed by the location older versions of banksync used."""
+    git_path = git_output("rev-parse", "--git-path", BISECT_RESTORE_NAME, cwd=syncrepo)
+    current = syncrepo / git_path if git_path else syncrepo / ".git" / BISECT_RESTORE_NAME
+    return [current, syncrepo / LEGACY_BISECT_RESTORE_FILE]
 
 
-def _read_bisect_restore(syncrepo: Path) -> dict[str, str] | None:
-    path = syncrepo / BISECT_RESTORE_FILE
-    if not path.exists():
-        return None
-    restore: dict[str, str] = json.loads(path.read_text()) or {}
-    return restore
+def _record_revisions_before_bisect(syncfile: SyncFile) -> bool:
+    repos = syncfile.repositories
+    restore: dict[str, str] = {}
+    ok = True
+    for name, info in repos.items():
+        label = padded(name, repos)
+        repo = syncfile.repo_path(info)
+        revision = git.branch_or_sha(repo) if check_repo(label, repo) else None
+        if not revision:
+            ok = False
+            console.say(f"{console.red(label)}: error recording the original branch in {repo}")
+            continue
+        restore[str(repo)] = revision
+        console.say(f"{console.green(label)}: recording repository state of '{revision}' before starting bisect")
+    _bisect_restore_paths(syncfile.syncrepo)[0].write_text(json.dumps(restore, indent=4) + "\n")
+    if not ok:
+        console.failure("failure! not all repo states recorded before bisect.")
+    return ok
+
+
+def _restore_revisions_after_bisect(syncfile: SyncFile) -> bool:
+    paths = [path for path in _bisect_restore_paths(syncfile.syncrepo) if path.is_file()]
+    if not paths:
+        console.say(console.yellow("We are not in a bisection or bisection record not found."), Level.SUMMARY)
+        return True
+    restore: dict[str, str] = json.loads(paths[0].read_text()) or {}
+
+    repos = syncfile.repositories
+    ok = True
+    for name, info in repos.items():
+        label = padded(name, repos)
+        repo = syncfile.repo_path(info)
+        revision = restore.get(str(repo))
+        if not revision or not check_repo(label, repo):
+            ok = False
+            console.say(f"{console.red(label)}: error restoring the original branch in {repo}: no recorded state")
+        elif _checkout(repo, revision, []):
+            console.say(f"{console.green(label)}: restoring repository state to '{revision}' after finishing bisect")
+        else:
+            ok = False
+            console.say(f"{console.red(label)}: failed to restore repository state to '{revision}' after finishing bisect")
+    for path in paths:
+        path.unlink()
+    if not ok:
+        console.failure("failure! not all repo states restored after bisect.")
+    return ok
+
+
+def _bisect_run_arguments(syncfile: SyncFile, extra_args: Sequence[str], opts: Options) -> list[str]:
+    """`git bisect run` arguments that sync the bank before running the user's command at each step.
+
+    git runs the script in the syncrepo after checking out each step. The script syncs the bank to the syncfile it
+    checked out, exiting with 125 (which tells git to skip the step) if that fails, and then runs the command."""
+    command = list(extra_args[1:] if extra_args[:1] == ["--"] else extra_args)
+    if not command:
+        raise BanksyncError("failure! `bank bisect run` needs a command to run, e.g. `bank bisect run make test`.")
+    script = '"$0" -m banksync sync --syncfile "$1" --verbosity "$2" --colorize "$3" || exit 125; shift 3; exec "$@"'
+    colorize = "yes" if opts.colorize else "no"
+    step_verbosity = str(min(opts.verbosity, Level.SUMMARY))
+    return ["bisect", "run", "sh", "-c", script, sys.executable, str(syncfile.path), step_verbosity, colorize, *command]
 
 
 def bisect(syncfile: SyncFile, subcommand: str, extra_args: Sequence[str], opts: Options) -> bool:
-    syncrepo = syncfile.syncrepo
-    repos = syncfile.repositories
-    before = git.head_sha(syncrepo)
-    any_failures = False
+    """Run `git bisect <subcommand>` in the syncrepo, and sync the bank whenever that checks out another syncfile.
 
+    `start` records the branch or commit of each repo, and `reset` restores them."""
+    syncrepo = syncfile.syncrepo
     if opts.dryrun:
-        console.say("would try exectue the given bisect command on the current sync repo and sync the bank repos to the new state.")
+        console.say(f"would run `git bisect {subcommand}` in {relative_to_cwd(syncrepo)} and sync the bank to the syncfile it checks out.")
         return True
 
-    if subcommand == "start":
-        restore: dict[str, str] = {}
-        for name, info in repos.items():
-            label = padded(name, repos)
-            repo = syncfile.repo_path(info)
-            revision = git.branch_or_sha(repo)
-            if not revision:
-                any_failures = True
-                console.say(f"{console.red(label)}: error recoding original branch in {repo}")
-                continue
-            restore[str(repo)] = revision
-            console.say(f"{console.green(label)}: recording repository state of '{revision}' before starting bisect")
-        _write_bisect_restore(syncrepo, restore)
-        if any_failures:
-            console.failure("failure! not all repo states recorded before bisect.")
+    ok = _record_revisions_before_bisect(syncfile) if subcommand == "start" else True
 
-    run_git("bisect", subcommand, *extra_args, cwd=syncrepo, show=Level.REPO)
+    before = git.head_sha(syncrepo)
+    if subcommand == "run":
+        arguments = _bisect_run_arguments(syncfile, extra_args, opts)
+    else:
+        arguments = ["bisect", subcommand, *extra_args]
+    ok = run_git(*arguments, cwd=syncrepo, show=Level.REPO, stream=True).ok and ok
+
     if git.head_sha(syncrepo) != before:
-        sync(SyncFile.load(syncfile.path), opts)  # the bisect step checked out a different version of the syncfile
+        ok = sync(SyncFile.load(syncfile.path), opts) and ok  # the bisect step checked out a different syncfile
 
     if subcommand == "reset":
-        restore_or_none = _read_bisect_restore(syncrepo)
-        if not restore_or_none:
-            console.say(console.yellow("We are not in a bisection or bisection record not found."), Level.SUMMARY)
-            return True
-        for name, info in repos.items():
-            label = padded(name, repos)
-            repo = syncfile.repo_path(info)
-            revision = restore_or_none.get(str(repo))
-            if not revision:
-                any_failures = True
-                console.say(f"{console.red(label)}: error restoring original branch in {repo}")
-                continue
-            run_git("checkout", revision, cwd=repo)
-            console.say(f"{console.green(label)}: restoring repository state to '{revision}' after finishing bisect")
-        if any_failures:
-            console.failure("failure! not all repo states restored after bisect.")
-        (syncrepo / BISECT_RESTORE_FILE).unlink()
-
-    return True
+        ok = _restore_revisions_after_bisect(syncfile) and ok
+    return ok
 
 
 # --------------------------------------------------------------------------------------------------------------------
 # clone and populate
 # --------------------------------------------------------------------------------------------------------------------
 
+DEFAULT_SYNCREPO_NAME = "syncrepo"
+
+
+def _clone_syncreponame(syncfile_path: Path) -> str:
+    """The directory name the syncfile asks the syncrepo to be cloned into (`clone.syncreponame`), if it is a safe
+    relative path inside the project, else 'syncrepo'."""
+    try:
+        name = json.loads(syncfile_path.read_text()).get("configuration", {}).get("clone.syncreponame")
+    except (OSError, ValueError, AttributeError):
+        name = None
+    if not isinstance(name, str) or not name or os.path.isabs(name) or ".." in Path(name).parts or name == ".":
+        return DEFAULT_SYNCREPO_NAME
+    return name
+
 
 def clone(url: str, name: str | None, opts: Options) -> bool:
+    """Clone a syncrepo into <name>/<clone.syncreponame> and then populate the bank around it."""
     if not is_valid_git_url(url):
         raise BanksyncError(f"failure! {url} appears not to be a URL that works with git clone.")
     destination = Path(os.path.abspath(name or repo_name_from_url(url)))
+    if destination.exists() and (not destination.is_dir() or any(destination.iterdir())):
+        raise BanksyncError(f"failure! {destination} already exists and is not an empty directory.")
+
+    if opts.dryrun:
+        console.say(f"would clone {url} to {destination} and then populate the repositories given in its syncfile.")
+        return True
 
     destination.mkdir(parents=True, exist_ok=True)
     console.progress(f">> cloning {url}...")
     result = run_git("clone", url, destination.name, cwd=destination.parent, stream=True)
     if not result.ok:
-        console.say(f"{console.red(url)}: error cloning repo to {destination}:\n    {result.stderr}")
+        console.say(f"{console.red(url)}: error cloning repo to {destination}:\n    {result.stderr.strip()}")
         return False
     console.say(f"{console.green(url)}: cloned repo to {destination}")
 
-    syncrepo = destination / "syncrepo"
-
-    # The URL is normally that of the syncrepo, so move it down into project/syncrepo.
-    if find_syncfile_named_like(destination):
+    # The URL is normally that of the syncrepo itself, so move it down into the project directory. (Otherwise the URL
+    # is that of a project which contains the syncrepo.)
+    cloned_syncfile = find_syncfile_in(destination, __version__)
+    if cloned_syncfile:
+        syncrepo = destination / _clone_syncreponame(cloned_syncfile)
         move_directory(destination, syncrepo)
+        syncfile_path: Path | None = syncrepo / cloned_syncfile.name
+    else:
+        syncfile_path = find_syncfile_below(destination, __version__)
 
-    syncfile_path = find_syncfile_named_like(syncrepo)
     if not syncfile_path:
-        console.say(f"{console.red('failure!')}: no syncfile found at {destination} or {syncrepo}")
+        console.failure(f"failure! no syncfile found in {destination} or the directories inside it.")
         return False
-
     return populate(SyncFile.load(syncfile_path), opts)
 
 
 def populate(syncfile: SyncFile, opts: Options) -> bool:
+    """Clone each repository in the syncfile that is not present yet, then sync the bank."""
     repos = syncfile.repositories
     any_failures = False
     for name, info in repos.items():
         label = padded(name, repos)
         repo = syncfile.repo_path(info)
+        if git.is_working_tree_root(repo):
+            console.say(f"{console.green(label)}: already present at {repo}")
+            continue
+        if repo.exists() and (not repo.is_dir() or any(repo.iterdir())):
+            any_failures = True
+            console.say(f"{console.red(label)}: {repo} already exists but is not a git repository")
+            continue
         url = info.get("cloneURL")
         if not url:
             any_failures = True
@@ -466,8 +547,9 @@ def status(syncfile: SyncFile, opts: Options) -> bool:
 # Git commands that make sense run non-interactively in every repo of a bank. Other commands are allowed but warned
 # about. The command line completes these.
 APPROVED_GIT_COMMANDS = [
-    "reset", "log", "status", "branch", "checkout", "commit", "tag", "diff", "fetch",
-    "push", "pull", "prune", "gc", "fsck", "ls-files", "ls-remote", "ls-tree",
+    "status", "log", "show", "diff", "branch", "tag", "checkout", "switch", "restore", "reset", "commit", "stash",
+    "fetch", "pull", "push", "remote", "describe", "rev-parse", "grep", "prune", "gc", "fsck", "ls-files",
+    "ls-remote", "ls-tree",
 ]  # fmt: skip
 
 

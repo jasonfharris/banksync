@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 from collections.abc import Iterator
@@ -17,6 +18,8 @@ from typing import Any
 import pytest
 
 PACKAGE_ROOT = Path(__file__).resolve().parent.parent
+
+ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
 # A fixed base time for commits, so timestamp matching does not depend on sleeping between commits.
 BASE_TIMESTAMP = 1_700_000_000
@@ -66,7 +69,7 @@ class Workspace:
     # ----- bank -----
 
     def bank(self, *args: str, cwd: str | Path = ".", ok: bool = True) -> str:
-        """Run `bank <args>` and return its combined stdout and stderr.
+        """Run `bank <args>` and return its combined stdout and stderr, without ANSI color codes.
 
         With ok=True the command must succeed; with ok=False it must fail."""
         result = subprocess.run(
@@ -75,7 +78,7 @@ class Workspace:
             capture_output=True,
             text=True,
         )
-        output = result.stdout + result.stderr
+        output = ANSI_ESCAPE.sub("", result.stdout + result.stderr)
         if ok and result.returncode != 0:
             raise AssertionError(f"bank {' '.join(args)} failed with exit code {result.returncode}:\n{output}")
         if not ok and result.returncode == 0:

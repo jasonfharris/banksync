@@ -13,7 +13,7 @@ import argcomplete
 
 from . import commands
 from .console import console
-from .options import COLORIZE_VALUES, MATCHING_VALUES, SYNC_BRANCHES_VALUES, Options, user_rc_layer
+from .options import COLORIZE_VALUES, MATCHING_VALUES, SYNC_BRANCHES_VALUES, VERBOSITY_VALUES, Options, user_rc_layer
 from .shell import CommandFailed
 from .syncfile import SyncFile, locate_syncfile
 from .util import BanksyncError, wrap_paragraphs
@@ -25,29 +25,6 @@ OPERATION_COMMANDS = ["sync", "record_repos", "bisect", "populate", "git", "gita
 
 BISECT_SUBCOMMANDS = ["start", "bad", "new", "good", "old", "terms", "skip", "reset", "visualize", "replay", "log", "run"]
 
-# This list was culled from `git help -a`
-ALL_GIT_COMMANDS = [
-    "add", "add--interactive", "am", "annotate", "apply", "archimport", "archive", "bisect", "bisect--helper",
-    "blame", "branch", "bundle", "cat-file", "check-attr", "check-ignore", "check-mailmap", "check-ref-format",
-    "checkout", "checkout-index", "cherry", "cherry-pick", "citool", "clean", "clone", "column", "commit",
-    "commit-tree", "config", "count-objects", "credential", "credential-cache", "credential-cache--daemon",
-    "credential-store", "cvsexportcommit", "cvsimport", "cvsserver", "daemon", "describe", "diff", "diff-files",
-    "diff-index", "diff-tree", "difftool", "difftool--helper", "fast-export", "fast-import", "fetch", "fetch-pack",
-    "filter-branch", "fmt-merge-msg", "for-each-ref", "format-patch", "fsck", "fsck-objects", "gc",
-    "get-tar-commit-id", "grep", "gui", "gui--askpass", "hash-object", "help", "http-backend", "http-fetch",
-    "http-push", "index-pack", "init", "init-db", "instaweb", "interpret-trailers", "log", "ls-files", "ls-remote",
-    "ls-tree", "mailinfo", "mailsplit", "merge", "merge-base", "merge-file", "merge-index", "merge-octopus",
-    "merge-one-file", "merge-ours", "merge-recursive", "merge-resolve", "merge-subtree", "merge-tree", "mergetool",
-    "mktag", "mktree", "mv", "name-rev", "notes", "p4", "pack-objects", "pack-redundant", "pack-refs", "patch-id",
-    "prune", "prune-packed", "pull", "push", "quiltimport", "read-tree", "rebase", "receive-pack", "reflog",
-    "relink", "remote", "remote-ext", "remote-fd", "remote-ftp", "remote-ftps", "remote-http", "remote-https",
-    "remote-testsvn", "repack", "replace", "request-pull", "rerere", "reset", "rev-list", "rev-parse", "revert", "rm",
-    "send-email", "send-pack", "sh-i18n--envsubst", "shell", "shortlog", "show", "show-branch", "show-index",
-    "show-ref", "stage", "stash", "status", "stripspace", "submodule", "submodule--helper", "svn", "symbolic-ref",
-    "tag", "unpack-file", "unpack-objects", "update-index", "update-ref", "update-server-info", "upload-archive",
-    "upload-pack", "var", "verify-commit", "verify-pack", "verify-tag", "web--browse", "whatchanged", "worktree",
-    "write-tree",
-]  # fmt: skip
 
 
 # --------------------------------------------------------------------------------------------------------------------
@@ -210,22 +187,33 @@ repos in the bank and in addition to the actual repo containing the sync file (t
 # --------------------------------------------------------------------------------------------------------------------
 
 
+def complete_git_command(**_: object) -> list[str]:
+    """Shell completion for the git command of `bank git` / `bank gitall`."""
+    return commands.APPROVED_GIT_COMMANDS
+
+
 def build_parser() -> argparse.ArgumentParser:
-    syncfile_options = argparse.ArgumentParser(add_help=False)
+    # allow_abbrev=False everywhere: otherwise `bank git log --color` would be taken as an abbreviation of --colorize.
+    syncfile_options = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
     syncfile_options.add_argument("--syncfile", metavar="SYNCFILE", help="the path to the syncfile")
 
-    common_options = argparse.ArgumentParser(add_help=False)
+    common_options = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
     common_options.add_argument(
         "--verbosity",
         metavar="NUM",
         type=int,
+        choices=VERBOSITY_VALUES,
         help="Specify the level of reported feedback / detail. Acceptable values: 1 (minimal feedback), 2 (some feedback) , 3 (detailed feedback), or 4 (full feedback)",
     )
     common_options.add_argument("--colorize", metavar="BOOL", choices=COLORIZE_VALUES, help=f"Colorize the output: {list(COLORIZE_VALUES)}")
     common_options.add_argument("--dryrun", action="store_true", help="Print what would happen instead of performing the command")
 
     parser = argparse.ArgumentParser(
-        prog="bank", description=MAIN_DESCRIPTION, epilog=MAIN_EPILOG, formatter_class=argparse.RawDescriptionHelpFormatter
+        prog="bank",
+        description=MAIN_DESCRIPTION,
+        epilog=MAIN_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        allow_abbrev=False,
     )
     parser.add_argument(
         "--version",
@@ -243,6 +231,7 @@ def build_parser() -> argparse.ArgumentParser:
             epilog=wrap_paragraphs(COMMAND_EPILOG[name]),
             parents=list(parents),
             formatter_class=argparse.RawDescriptionHelpFormatter,
+            allow_abbrev=False,
         )
 
     sync = add_command("sync")
@@ -271,19 +260,26 @@ def build_parser() -> argparse.ArgumentParser:
 
     for name, where in [("git", "on all the repos in the bank"), ("gitall", "on all the repos in the bank including the syncrepo")]:
         git_command = add_command(name)
-        git_command.add_argument("gitcmd", metavar="GITCMD", nargs="?", default="status", choices=ALL_GIT_COMMANDS, help=f"perform one of {commands.APPROVED_GIT_COMMANDS} {where}.")
+        gitcmd = git_command.add_argument("gitcmd", metavar="GITCMD", nargs="?", default="status", help=f"the git command to perform {where}, e.g. one of {commands.APPROVED_GIT_COMMANDS}.")
+        gitcmd.completer = complete_git_command  # type: ignore[attr-defined]
 
     return parser
 
 
 def parse_arguments(argv: Sequence[str]) -> tuple[argparse.Namespace, list[str]]:
-    """Parse the command line. Arguments bank does not recognize are passed on to git by `bank git` / `bank bisect`."""
+    """Parse the command line. Arguments bank does not recognize are passed on to git by `bank git` / `bank bisect`.
+
+    Everything from a `--` onwards is passed on unparsed, including the `--` itself, so that for example
+    `bank git checkout -- file.txt` and `bank git log -- path` reach git as written."""
     parser = build_parser()
     argcomplete.autocomplete(parser)
     if not argv:
         parser.print_help()
         sys.exit(1)
-    return parser.parse_known_args(argv)
+    argv = list(argv)
+    split = argv.index("--") if "--" in argv else len(argv)
+    args, extra_args = parser.parse_known_args(argv[:split])
+    return args, extra_args + argv[split:]
 
 
 def command_line_layer(args: argparse.Namespace) -> dict[str, str]:

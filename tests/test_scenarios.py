@@ -321,10 +321,146 @@ def test_create_syncfile_reports_missing_syncrepos_and_repos(workspace: Workspac
     ws.init_repo("repoFish")  # a repository without any commits
     output = ws.bank(*args, ok=False)
     assert "not able to get the status of repoFish" in output
-    assert "failure! not all repos had their state recorded to repoBob/syncfile.json" in output
+    assert "failure! syncfile repoBob/syncfile.json not created." in output
+    assert not ws.path("repoBob/syncfile.json").exists()  # an incomplete syncfile is never written
 
     output = ws.bank("create_syncrepo", "--syncreponame", "repoBob", "repoFish", "repoBird", ok=False)
     assert "already exists" in output
+
+    # A failed create_syncrepo removes the syncrepo it created, so it can be rerun once the repos are fixed.
+    ws.bank("create_syncrepo", "--syncreponame", "zoosyncrepo", "repoFish", "repoBird", ok=False)
+    assert not ws.path("zoosyncrepo").exists()
+
+
+def test_create_syncfile_rejects_two_repos_with_the_same_name(workspace: Workspace) -> None:
+    ws = workspace
+    ws.init_repo("syncrepo")
+    for repo in ("one/repoFish", "two/repoFish"):
+        ws.init_repo(repo)
+        ws.commit(repo, "Fish.txt", "trout", BASE_TIMESTAMP)
+    output = ws.bank("create_syncfile", "--syncfile", "syncrepo/syncfile.json", "one/repoFish", "two/repoFish", ok=False)
+    assert "are both named repoFish" in output
+    assert not ws.path("syncrepo/syncfile.json").exists()
+
+
+def test_bisect_keeps_its_state_out_of_the_syncrepo_working_tree(animals: Animals) -> None:
+    ws = animals.ws
+    sp1, _, sp3 = animals.sync_points
+    animals.bank("explicit", "bisect", "start")
+    animals.bank("explicit", "bisect", "good", sp1)
+    animals.bank("explicit", "bisect", "bad", sp3)
+    assert ws.git("repoSyncFile", "status", "--porcelain") == ""
+    assert ws.path("repoSyncFile/.git/banksync-bisect-restore.json").is_file()
+
+    animals.bank("explicit", "bisect", "reset")
+    assert not ws.path("repoSyncFile/.git/banksync-bisect-restore.json").exists()
+
+
+def test_bisect_reset_reports_repos_it_could_not_restore(animals: Animals) -> None:
+    ws = animals.ws
+    sp1, _, sp3 = animals.sync_points
+    animals.bank("explicit", "bisect", "start")
+    animals.bank("explicit", "bisect", "good", sp1)
+    animals.bank("explicit", "bisect", "bad", sp3)
+
+    # A local change that conflicts with the original branch stops repoFish from being restored.
+    (ws.path("repoFish") / "Fish.txt").write_text("local change\n")
+    output = animals.bank("explicit", "bisect", "reset", ok=False)
+    assert "repoFish: failed to restore repository state to 'master'" in output
+    assert "failure! not all repo states restored after bisect." in output
+    assert ws.branch("repoBird") == "master"
+
+
+def test_bisect_run_syncs_the_bank_before_each_step(animals: Animals) -> None:
+    ws = animals.ws
+    sp1, sp2, sp3 = animals.sync_points
+    animals.bank("explicit", "bisect", "start", sp3, sp1)
+
+    # The step command runs in the syncrepo; it fails ("bad") once repoFish contains salmon.
+    output = animals.bank("explicit", "bisect", "run", "sh", "-c", "! grep -q salmon ../repoFish/Fish.txt")
+    assert f"{sp3} is the first bad commit" in output
+
+    animals.bank("explicit", "bisect", "reset")
+    assert animals.heads() == animals.at(3)
+
+
+def test_bisect_run_needs_a_command(animals: Animals) -> None:
+    animals.bank("explicit", "bisect", "start")
+    output = animals.bank("explicit", "bisect", "run", ok=False)
+    assert "needs a command to run" in output
+
+
+def test_record_repos_keeps_keys_banksync_does_not_write(animals: Animals) -> None:
+    ws = animals.ws
+    syncfile = ws.read_json(SYNCFILE)
+    syncfile["repositories"]["repoFish"]["notes"] = "pinned for the 2.0 release"
+    ws.write_json(SYNCFILE, syncfile)
+
+    ws.commit("repoFish", "Fish.txt", "pike", BASE_TIMESTAMP + 300)
+    animals.bank("explicit", "record_repos")
+    fish = ws.read_json(SYNCFILE)["repositories"]["repoFish"]
+    assert fish["notes"] == "pinned for the 2.0 release"
+    assert fish["sha"] == ws.head("repoFish")
+
+
+def test_git_accepts_any_git_command_and_passes_options_and_double_dash_through(animals: Animals) -> None:
+    ws = animals.ws
+    # `--color` is not taken as an abbreviation of bank's --colorize.
+    output = animals.bank("explicit", "git", "log", "-1", "--color=never", "--format=%s")
+    assert "committing salmon" in output and "committing eagle" in output
+
+    # Everything after `--` reaches git as written: here a pathspec rather than a revision.
+    output = animals.bank("explicit", "git", "log", "--format=%s", "--", "Fish.txt", "--colorize", "no")
+    assert "committing trout" in output
+
+    # Commands outside the approved list run, with a warning.
+    output = animals.bank("explicit", "git", "count-objects")
+    assert "might not make sense" in output
+    animals.bank("explicit", "git", "switch", "--quiet", "--detach", "HEAD~1")
+    assert animals.heads() == animals.at(2)
+
+
+def test_create_syncrepo_accepts_a_syncfilename_path_inside_the_syncrepo(animals: Animals) -> None:
+    ws = animals.ws
+    ws.bank(
+        "create_syncrepo",
+        "--syncreponame", "some/path/zoo",
+        "--syncfilename", "some/path/zoo/devCollection.json",
+        "repoFish", "repoBird",
+    )  # fmt: skip
+    assert ws.path("some/path/zoo/devCollection.json").is_file()
+
+    output = ws.bank("create_syncrepo", "--syncreponame", "other", "--syncfilename", "some/devCollection.json", "repoFish", ok=False)
+    assert "does not live directly inside other" in output
+
+
+def test_populate_skips_repos_that_are_already_present(workspace: Workspace) -> None:
+    ws = workspace
+    fish, bird = make_bank_with_remotes(ws, "repoFish", "repoBird")
+    ws.bank("create_syncrepo", "repoFish", "repoBird")
+    shutil.rmtree(ws.path("repoBird"))
+
+    output = ws.bank("populate", cwd="syncrepo")
+    assert "repoFish: already present at" in output
+    assert "repoBird: cloned repo to" in output
+    assert (ws.head("repoFish"), ws.head("repoBird")) == (fish, bird)
+
+
+def test_clone_uses_the_syncreponame_and_syncfile_name_recorded_in_the_syncfile(workspace: Workspace) -> None:
+    ws = workspace
+    fish, bird = make_bank_with_remotes(ws, "original/repoFish", "original/repoBird")
+    ws.bank("create_syncrepo", "--syncreponame", "control", "--syncfilename", "earthanimals.json", "repoFish", "repoBird", cwd="original")
+    ws.git("original/control", "add", "earthanimals.json")
+    ws.git("original/control", "commit", "--quiet", "-m", "initial")
+    remote = ws.make_bare_remote("original/control", "animalsSyncRepo.git")
+
+    ws.path("work").mkdir()
+    ws.bank("clone", str(remote), "zoo", cwd="work")
+    assert ws.path("work/zoo/control/earthanimals.json").is_file()
+    assert (ws.head("work/zoo/repoFish"), ws.head("work/zoo/repoBird")) == (fish, bird)
+
+    output = ws.bank("clone", str(remote), "zoo", cwd="work", ok=False)
+    assert "already exists and is not an empty directory" in output
 
 
 @pytest.mark.network
