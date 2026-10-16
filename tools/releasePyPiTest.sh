@@ -1,27 +1,50 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# https://packaging.python.org/tutorials/packaging-projects/
+set -euo pipefail
 
-# cd to /Development/Python/banksync_Package
-# it is important the script is run from there.
+# Build and upload banksync to TestPyPI.
+#
+# Requirements:
+#   - ~/.pypirc contains a [testpypi] entry, or Twine credentials are supplied
+#     via environment variables / interactive prompt.
+#   - banksync/banksync.py has a new __version__; TestPyPI will reject reused
+#     versions just like PyPI.
 
-pip3 uninstall banksync
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+PYTHON_BIN="${PYTHON:-python3}"
 
-rm -r banksync.egg-info 2> /dev/null
-rm -r build 2> /dev/null
-rm -r dist 2> /dev/null
+cd "${REPO_ROOT}"
 
-python3 -m build
+VERSION="$("${PYTHON_BIN}" - <<'PY'
+from pathlib import Path
 
-#python3 -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
-# Enter the TestPyPI user: jasonfh
-# Enter the TestPyPI pass: **************
+for line in Path("banksync/banksync.py").read_text().splitlines():
+    if line.startswith("__version__"):
+        print(line.split("=", 1)[1].strip().strip("\"'"))
+        break
+else:
+    raise SystemExit("Could not find __version__ in banksync/banksync.py")
+PY
+)"
 
-# The following uses the information in ~/.pypirc
-python3 -m twine upload --repository testpypi dist/*
+echo "Preparing banksync ${VERSION} for TestPyPI"
 
+"${PYTHON_BIN}" -m pip install --upgrade build twine
 
-sleep 5
+rm -rf banksync.egg-info build dist
 
-# install the package locally from TestPyPI:
-pip3 install -i https://test.pypi.org/simple/ banksync
+"${PYTHON_BIN}" -m build
+"${PYTHON_BIN}" -m twine check dist/*
+"${PYTHON_BIN}" -m twine upload --repository testpypi dist/*
+
+cat <<EOF
+
+Uploaded banksync ${VERSION} to TestPyPI.
+
+Verify from a clean environment with:
+  ${PYTHON_BIN} -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ banksync==${VERSION}
+  bank --version
+
+This script does not uninstall or replace the current editable install.
+EOF

@@ -1,25 +1,49 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# https://packaging.python.org/tutorials/packaging-projects/
-# python3 -m pip install --upgrade build
+set -euo pipefail
 
-# cd to /Development/Python/sysexecute_Package
-# it is important the script is run from there.
+# Build and upload banksync to the real PyPI repository.
+#
+# Requirements:
+#   - ~/.pypirc contains a [pypi] entry, or Twine credentials are supplied via
+#     environment variables / interactive prompt.
+#   - banksync/banksync.py has a new __version__; PyPI will reject reused versions.
 
-pip3 uninstall banksync
-#python3 setup.py sdist bdist_wheel
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+PYTHON_BIN="${PYTHON:-python3}"
 
-python3 -m build
+cd "${REPO_ROOT}"
 
-#python3 -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
-# Enter the TestPyPI user: jasonfh
-# Enter the TestPyPI pass: **************
+VERSION="$("${PYTHON_BIN}" - <<'PY'
+from pathlib import Path
 
-# The following uses the information in ~/.pypirc
-python3 -m twine upload --repository pypi dist/*
+for line in Path("banksync/banksync.py").read_text().splitlines():
+    if line.startswith("__version__"):
+        print(line.split("=", 1)[1].strip().strip("\"'"))
+        break
+else:
+    raise SystemExit("Could not find __version__ in banksync/banksync.py")
+PY
+)"
 
+echo "Preparing banksync ${VERSION} for PyPI"
 
-sleep 5
+"${PYTHON_BIN}" -m pip install --upgrade build twine
 
-# install the package locally from TestPyPI:
-pip3 install banksync
+rm -rf banksync.egg-info build dist
+
+"${PYTHON_BIN}" -m build
+"${PYTHON_BIN}" -m twine check dist/*
+"${PYTHON_BIN}" -m twine upload --repository pypi dist/*
+
+cat <<EOF
+
+Uploaded banksync ${VERSION} to PyPI.
+
+Verify from a clean environment with:
+  ${PYTHON_BIN} -m pip install --upgrade banksync==${VERSION}
+  bank --version
+
+This script does not uninstall or replace the current editable install.
+EOF
