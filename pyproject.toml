@@ -56,3 +56,6 @@ version = { attr = "banksync.banksync.__version__" }
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+markers = [
+    "network: needs access to github.com; skipped unless BANKSYNC_NETWORK_TESTS=1",
+]
