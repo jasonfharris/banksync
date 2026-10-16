@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import os
 import shutil
+import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -461,6 +464,43 @@ def test_clone_uses_the_syncreponame_and_syncfile_name_recorded_in_the_syncfile(
 
     output = ws.bank("clone", str(remote), "zoo", cwd="work", ok=False)
     assert "already exists and is not an empty directory" in output
+
+
+def test_options_layer_rc_file_then_syncfile_then_command_line(animals: Animals) -> None:
+    ws = animals.ws
+    animals.checkout_syncrepo(animals.sync_points[0])
+    syncfile = ws.read_json(SYNCFILE)
+    for info in syncfile["repositories"].values():
+        del info["sha"]  # leave only the timestamps, so the matching option decides whether the sync succeeds
+    ws.write_json(SYNCFILE, syncfile)
+
+    rc_file = Path(os.environ["HOME"]) / ".bankconfigrc"
+    rc_file.write_text("[sync]\nmatching = shaOnly\n")
+    output = animals.bank("explicit", "sync", ok=False)
+    assert "failed to check out specified revision by any method" in output
+
+    syncfile["configuration"]["sync.matching"] = "timestamp"  # the syncfile overrides ~/.bankconfigrc
+    ws.write_json(SYNCFILE, syncfile)
+    animals.bank("explicit", "sync")
+    assert animals.heads() == animals.at(1)
+
+    syncfile["configuration"]["sync.matching"] = "shaOnly"
+    ws.write_json(SYNCFILE, syncfile)
+    animals.bank("explicit", "sync", "--matching", "timestamp")  # the command line overrides the syncfile
+
+    syncfile["configuration"]["sync.matching"] = "sometimes"
+    ws.write_json(SYNCFILE, syncfile)
+    output = animals.bank("explicit", "sync", ok=False)
+    assert "invalid value 'sometimes' for option sync.matching" in output
+
+
+def test_output_is_only_colored_on_request_when_not_on_a_terminal(animals: Animals) -> None:
+    def raw_output(*args: str) -> str:
+        result = subprocess.run([sys.executable, "-m", "banksync", "status", "--syncfile", SYNCFILE, *args], cwd=animals.ws.root, capture_output=True, text=True)
+        return result.stdout
+
+    assert "\x1b[" not in raw_output()
+    assert "\x1b[" in raw_output("--colorize", "yes")
 
 
 @pytest.mark.network

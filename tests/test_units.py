@@ -8,7 +8,7 @@ import pytest
 
 from banksync import git
 from banksync.console import Console, Level
-from banksync.options import Options, flatten, merge, read_rc_file
+from banksync.options import Options, flatten, merge, read_rc_file, syncfile_layer
 from banksync.shell import CommandFailed, describe, run
 from banksync.util import BanksyncError, repo_name_from_url, version_less_or_equal
 from conftest import BASE_TIMESTAMP, Workspace
@@ -77,6 +77,34 @@ def test_rc_file_options_are_validated(tmp_path: Path) -> None:
         Options.resolve({"sync.matching": "sometimes"})
     with pytest.raises(BanksyncError, match="general.verbosity"):
         Options.resolve({"general.verbosity": "7"})
+
+
+def test_syncfile_configuration_only_supplies_general_and_sync_options() -> None:
+    configuration = {
+        "relativePathToRepositories": "..",
+        "clone.syncreponame": "syncrepo",
+        "sync.matching": "timestamp",
+        "sync.syncBranches": "yes",
+        "general.verbosity": 3,
+        "create_syncrepo.syncreponame": "elsewhere",
+    }
+    assert syncfile_layer(configuration) == {"sync.matching": "timestamp", "sync.syncbranches": "yes", "general.verbosity": "3"}
+
+
+def test_colorize_auto_follows_the_terminal_and_no_color(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("sys.stdout.isatty", lambda: True)
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.setenv("TERM", "xterm-256color")
+    assert Options.resolve().colorize
+    assert not Options.resolve({"general.colorize": "no"}).colorize
+
+    monkeypatch.setenv("NO_COLOR", "1")
+    assert not Options.resolve().colorize
+    assert Options.resolve({"general.colorize": "yes"}).colorize
+
+    monkeypatch.delenv("NO_COLOR")
+    monkeypatch.setattr("sys.stdout.isatty", lambda: False)
+    assert not Options.resolve().colorize
 
 
 # ----- console -----

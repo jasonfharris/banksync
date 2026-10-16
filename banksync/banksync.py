@@ -13,7 +13,7 @@ import argcomplete
 
 from . import commands
 from .console import console
-from .options import COLORIZE_VALUES, MATCHING_VALUES, SYNC_BRANCHES_VALUES, VERBOSITY_VALUES, Options, user_rc_layer
+from .options import COLORIZE_VALUES, MATCHING_VALUES, SYNC_BRANCHES_VALUES, VERBOSITY_VALUES, Options, syncfile_layer, user_rc_layer
 from .shell import CommandFailed
 from .syncfile import SyncFile, locate_syncfile
 from .util import BanksyncError, wrap_paragraphs
@@ -300,16 +300,33 @@ def command_line_layer(args: argparse.Namespace) -> dict[str, str]:
 # --------------------------------------------------------------------------------------------------------------------
 
 
-def dispatch(args: argparse.Namespace, extra_args: list[str], opts: Options) -> bool:
+def configure(opts: Options) -> Options:
+    console.verbosity = opts.verbosity
+    console.colorize = opts.colorize
+    return opts
+
+
+def run_command(args: argparse.Namespace, extra_args: list[str]) -> bool:
+    """Resolve the options and run the command. Returns whether it succeeded."""
     command: str = args.command
-    if command == "create_syncfile":
-        return commands.create_syncfile(Path(args.syncfile or "syncfile.json").absolute(), args.repos, opts)
-    if command == "create_syncrepo":
-        return commands.create_syncrepo(args.repos, opts)
-    if command == "clone":
-        return commands.clone(args.url, args.name, opts)
+    rc_layer = user_rc_layer()
+    cli_layer = command_line_layer(args)
+
+    def options_for(syncfile: SyncFile) -> Options:
+        """The options for a command that works on `syncfile`, including those set in its configuration section."""
+        return configure(Options.resolve(rc_layer, syncfile_layer(syncfile.configuration), cli_layer, dryrun=args.dryrun))
+
+    opts = configure(Options.resolve(rc_layer, cli_layer, dryrun=args.dryrun))
+    match command:
+        case "create_syncfile":
+            return commands.create_syncfile(Path(args.syncfile or "syncfile.json").absolute(), args.repos, opts)
+        case "create_syncrepo":
+            return commands.create_syncrepo(args.repos, opts)
+        case "clone":
+            return commands.clone(args.url, args.name, opts, options_for)
 
     syncfile = SyncFile.load(locate_syncfile(args.syncfile, __version__))
+    opts = options_for(syncfile)
     match command:
         case "sync":
             return commands.sync(syncfile, opts)
@@ -329,10 +346,7 @@ def dispatch(args: argparse.Namespace, extra_args: list[str], opts: Options) -> 
 def main(argv: Sequence[str] | None = None) -> int:
     args, extra_args = parse_arguments(sys.argv[1:] if argv is None else argv)
     try:
-        opts = Options.resolve(user_rc_layer(), command_line_layer(args), dryrun=args.dryrun)
-        console.verbosity = opts.verbosity
-        console.colorize = opts.colorize
-        return 0 if dispatch(args, extra_args, opts) else 1
+        return 0 if run_command(args, extra_args) else 1
     except (BanksyncError, CommandFailed) as error:
         console.say(console.red(str(error)), 0)
         return 1

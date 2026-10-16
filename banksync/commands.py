@@ -6,7 +6,7 @@ import json
 import os
 import shutil
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from . import git
@@ -426,7 +426,7 @@ def _clone_syncreponame(syncfile_path: Path) -> str:
     return name
 
 
-def clone(url: str, name: str | None, opts: Options) -> bool:
+def clone(url: str, name: str | None, opts: Options, options_for: Callable[[SyncFile], Options]) -> bool:
     """Clone a syncrepo into <name>/<clone.syncreponame> and then populate the bank around it."""
     if not is_valid_git_url(url):
         raise BanksyncError(f"failure! {url} appears not to be a URL that works with git clone.")
@@ -459,7 +459,8 @@ def clone(url: str, name: str | None, opts: Options) -> bool:
     if not syncfile_path:
         console.failure(f"failure! no syncfile found in {destination} or the directories inside it.")
         return False
-    return populate(SyncFile.load(syncfile_path), opts)
+    syncfile = SyncFile.load(syncfile_path)
+    return populate(syncfile, options_for(syncfile))
 
 
 def populate(syncfile: SyncFile, opts: Options) -> bool:
