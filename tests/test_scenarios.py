@@ -503,6 +503,16 @@ def test_output_is_only_colored_on_request_when_not_on_a_terminal(animals: Anima
     assert "\x1b[" in raw_output("--colorize", "yes")
 
 
+def test_syncfiles_that_need_a_newer_banksync_are_refused(animals: Animals) -> None:
+    ws = animals.ws
+    syncfile = ws.read_json(SYNCFILE)
+    syncfile["configuration"]["requiredBanksyncVersion"] = "99.0"
+    ws.write_json(SYNCFILE, syncfile)
+    for style in ("explicit", "syncrepo"):
+        output = animals.bank(style, "status", ok=False)
+        assert "needs at least banksync version 99.0" in output
+
+
 @pytest.mark.network
 def test_quick_start_clone_from_github(workspace: Workspace) -> None:
     """The README Quick Start: clone the public animals example bank."""

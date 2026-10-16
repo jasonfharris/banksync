@@ -27,8 +27,16 @@ def is_sha1(text: str) -> bool:
 
 
 def wrap_paragraphs(text: str, width: int = 80) -> str:
-    """Wrap each paragraph (separated by blank lines) of `text` to `width` columns."""
-    return "\n\n".join(textwrap.fill(paragraph, width) for paragraph in text.split("\n\n"))
+    """Wrap each paragraph (separated by blank lines) of `text` to `width` columns.
+
+    Paragraphs whose lines are all indented, such as example commands, are left as they are."""
+
+    def wrap(paragraph: str) -> str:
+        if all(line.startswith(" ") for line in paragraph.splitlines()):
+            return paragraph
+        return textwrap.fill(paragraph, width)
+
+    return "\n\n".join(wrap(paragraph) for paragraph in text.split("\n\n"))
 
 
 def padded(name: str, names: Iterable[str]) -> str:

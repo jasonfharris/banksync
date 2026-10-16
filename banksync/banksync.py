@@ -19,10 +19,6 @@ from .syncfile import SyncFile, locate_syncfile
 from .util import BanksyncError, wrap_paragraphs
 from .version import __version__
 
-# Commands that create a syncrepo or syncfile, and commands that use an existing syncfile.
-CREATION_COMMANDS = ["create_syncfile", "create_syncrepo", "clone"]
-OPERATION_COMMANDS = ["sync", "record_repos", "bisect", "populate", "git", "gitall", "status"]
-
 BISECT_SUBCOMMANDS = ["start", "bad", "new", "good", "old", "terms", "skip", "reset", "visualize", "replay", "log", "run"]
 
 
@@ -31,153 +27,150 @@ BISECT_SUBCOMMANDS = ["start", "bad", "new", "good", "old", "terms", "skip", "re
 # Help texts
 # --------------------------------------------------------------------------------------------------------------------
 
-MAIN_DESCRIPTION = "execute operations across a collection of git repositories."
+MAIN_DESCRIPTION = "synchronize, record, bisect and run git commands across a bank (collection) of git repositories."
 MAIN_EPILOG = wrap_paragraphs(
-    """bank is a command line utility to checkout or create a synchronized state across a collection (a bank) of
-repositories, or to perform a git command in each of the repositories in the bank. The information about the
-repositories in the bank is specified in a "syncfile". The syncfile lives inside a normal git repo which we call the
-"syncrepo".
+    """bank checks out or records a synchronized state across a collection (a bank) of repositories, or performs a git
+command in each of the repositories in the bank. The repositories and their states are given in a "syncfile", a JSON
+file that lives inside a normal git repo called the "syncrepo", so that each commit of the syncrepo records a
+configuration of the whole bank.
 
-Using bank allows a more general way to handle sub-repositories / submodules. It is intended to be less brittle than
-traditional ways to specify submodules by allowing some looseness / decoupling.
+bank is a looser alternative to git submodules: when a recorded commit no longer exists, for example after a rebase,
+the repository can be matched by the commit's timestamp instead.
 
-The bank command line utility can also be used to issue a normal git command to every repository specified in the
-syncfile through use of `bank git <cmd>` and `bank gitall <cmd>`. Ie to issue the git command <cmd> to every repo in the bank of repos.
+Commands that use a syncfile find it with --syncfile, or else look in the current directory, and then in the
+subdirectories of the current directory and of each of its parent directories.
 
-All of the options, can be specified in in the syncfile itself or in your ~/.backsyncrc file so they do not
-need to be specified each time on the command line. See the documentation for the syncfile for more information."""
+Options can also be set in ~/.bankconfigrc (an INI file with [general] and [sync] sections) or in the
+"configuration" section of the syncfile (keys such as "sync.matching"). The command line wins over the syncfile,
+which wins over ~/.bankconfigrc. Run `bank <command> --help` for the options of a command."""
 )
 
 COMMAND_HELP: dict[str, str] = {
-    "sync": "checkout / update the repos given in the syncfile to the states given in the syncfile",
-    "record_repos": "alter the contents of the syncfile so that it matches the current revisions of the referenced repositories.",
-    "create_syncfile": "create or overwrite the syncfile to contain the current sync states for the passed in repos.",
-    "create_syncrepo": "create or overwrite the syncrepo to contain the current sync states for the passed in repos.",
-    "clone": "clone the repos specified in the syncfile",
-    "populate": "populate the repos specified in the syncfile",
-    "status": "reports the status of the repos specified in the syncfile",
-    "bisect": "bisect the syncrepo and sync all repos in the bank to the new state of the syncfile",
-    "git": "perform the given git command in each repo in the bank",
-    "gitall": "perform the given git command in each repo in the bank and additionally in the syncrepo",
+    "sync": "check out the revisions given in the syncfile in each repo of the bank",
+    "record_repos": "record the revisions currently checked out in the repos of the bank in the syncfile",
+    "create_syncfile": "create or overwrite a syncfile recording the current revisions of the given repos",
+    "create_syncrepo": "create a syncrepo and a syncfile in it recording the current revisions of the given repos",
+    "clone": "clone a syncrepo and then populate the bank it describes",
+    "populate": "clone the repos given in the syncfile that are not present yet, then sync",
+    "status": "report the branch and the modified and staged file counts of each repo in the bank",
+    "bisect": "git bisect the syncrepo, syncing the bank to the syncfile at each step",
+    "git": "perform a git command in each repo of the bank",
+    "gitall": "perform a git command in each repo of the bank and in the syncrepo",
 }
 
 COMMAND_EPILOG: dict[str, str] = {
-    "sync": """Example usage:
+    "sync": """For each repo, sync checks out the recorded sha, or if that fails (depending on --matching) the commit with the
+recorded timestamp, or the commit with the closest timestamp.
 
   bank sync
 
-This would find the "prevaling" syncfile.json and checkout / update the repos specified in the syncfile to the states given
-in the syncfile and list the results of the sync on each repo in the bank.
+Sync the bank to the syncfile that bank finds from the current directory.
 
   bank sync --syncfile some/dir/syncfile.json
 
-This would checkout / update the repos given in the syncfile.json located at some/dir to the states given
-in the syncfile.json.
+Sync the bank described by some/dir/syncfile.json.
+
+  bank sync --matching shaOnly
+
+Only accept the exact recorded commits.
 
   bank sync --syncBranches yes
 
-Sync the repos in the bank to the "prevaling" syncfile.json and sync the branches specified in the
-syncfile to the commits specified in the syncfile. This is useful if you want to change the branches to
-their state specified in the syncfile. If a branch for a child repo given in the syncfile already exists in the
-child repo, then don't move the branch. If the branch does not exist in the child repo, then create the branch
-and point it to the commit specified in the syncfile.
+Also create each recorded branch at the recorded commit if the branch does not exist yet. (By default the recorded
+branch is checked out if it already points at the recorded commit, and otherwise the commit is checked out with a
+detached HEAD.)
 
   bank sync --syncBranches force
 
-If the force option is used, then this acts like `--syncBranches yes` however the branch will be created or
-moved to the committ given in the syncfile even if the branch already exists in the child repo and is pointing
-to a different commit. (Be aware of course that this will move the local branches in the child repos to the commits
-specified in the syncfile and as such commits could be lost if there are no other references to them.)
+Create or move each recorded branch to the recorded commit, even if it points at a different commit. Be aware that
+this can leave commits on those branches unreferenced.
 """,
     "record_repos": """Example usage:
 
-  bank record_repos --syncfile syncfile.json
+  bank record_repos
 
-This would alter the contents of syncfile.json so that it matches the current revisions of the referenced repositories.
+Update the syncfile so that it records the commits currently checked out in the repos of the bank, then commit the
+syncfile in the syncrepo to record this configuration. Keys that bank does not write itself are kept.
 """,
     "create_syncfile": """Example usage:
 
   bank create_syncfile --syncfile syncrepo/syncfile.json repo1 repo2 ... repoN
 
-This would create or overwrite the syncfile.json to record the current states of repo1 repo2 ... repoN. Alternatively you could execute
+Create or overwrite syncrepo/syncfile.json to record the current states of repo1 repo2 ... repoN. The directory
+holding the syncfile must already be the top of a git repo (use create_syncrepo to create both). The repos may be
+given as relative or absolute paths, e.g.
 
-  bank create_syncfile --syncfile syncfile.json path1/to/repo1 path2/to/repo2 ... path3/to/repoN
+  bank create_syncfile --syncfile syncfile.json path1/to/repo1 path2/to/repo2 /abs/path/to/repoN
+
+No syncfile is written if the state of any repo cannot be recorded.
 """,
     "create_syncrepo": """Example usage:
 
   bank create_syncrepo repo1 repo2 ... repoN
 
-This would create and initilize a git repository called syncrepo and inside there it would create the syncfile.json
-to record the current states of the repo1 repo2 ... repoN which are located at this level. repo1, repo2, etc
-are the names or paths to the repositories to track in the bank collection.
+Create the directory syncrepo, initialize a git repository there, and create syncrepo/syncfile.json recording the
+current states of repo1 repo2 ... repoN, given as names or paths.
 
-  bank create_syncrepo --syncrepo <syncreponame> repo1 repo2 ... repoN
+  bank create_syncrepo --syncreponame some/path/controlrepo repo1 repo2 ... repoN
 
-This would create the syncrepo as the above command, but the repo would be called syncreponame.
+Create the syncrepo at some/path/controlrepo instead.
 
-  bank create_syncrepo --syncrepo some/path/syncreponame repo1 repo2 ... repoN
+  bank create_syncrepo --syncreponame some/path/controlrepo --syncfilename devCollection.json repo1 repo2
 
-  This would create the syncrepo as the above command, but the repo would be called syncreponame and located
-  at some/path relative to the current directory.
+Name the syncfile devCollection.json. (--syncfilename some/path/controlrepo/devCollection.json is equivalent.)
 
-  bank create_syncrepo --syncrepo some/path/syncreponame --syncfilename devCollection.json repo1 repo2 ...
-  repoN
-
-  This would create the syncrepo as the above command, but the syncfile would be named devCollection.json and located
-  at some/path/syncreponame/devCollection.json relative to the current directory.
+The syncrepo directory must not exist yet. The syncfile is not committed.
 """,
     "clone": """Example usage:
 
-  bank clone https://github.com/myProject/syncrepo.git myProject
+  bank clone https://github.com/myProject/myProjectSyncRepo.git myProject
 
-This would create the folder myProject and clone the syncrepo into myProject, and then populate each of the constituent repositories specified in the syncfile.
+Create the directory myProject, clone the syncrepo into myProject/syncrepo (or the directory named by the
+syncfile's clone.syncreponame), and populate the bank: clone each repo given in the syncfile and sync it. Without
+a name the directory is named after the URL, here myProject.
 """,
     "populate": """Example usage:
 
-  bank populate --syncfile syncfile.json
+  bank populate
 
-This would perform a git clone for each of the repositories specified in the syncfile.
+Clone each repo in the syncfile that is not present yet from its cloneURL, and then sync the bank. Repos that are
+already present are left as they are, so populate can be rerun.
 """,
     "status": """Example usage:
 
-  bank status --syncfile syncfile.json
+  bank status
 
-This would report the status of each of the repositories specified in the syncfile.
+Report the branch of each repo in the bank and how many files are modified or staged.
 """,
-    "bisect": """Example usage:
+    "bisect": f"""BISECTCMD is one of {BISECT_SUBCOMMANDS}; other arguments are passed on to git bisect.
+Whenever a step checks out a different version of the syncfile the bank is synced to it. `start` records the branch
+of each repo and `reset` restores it. Example usage:
 
-  bank bisect --syncfile syncfile.json reset
+  bank bisect start
+  bank bisect good 12e4f5
+  bank bisect bad master
+  <build and test, then mark the step with bank bisect good / bank bisect bad>
+  bank bisect reset
 
-This would pass the reset to the bisection of the sync-repo.
+  bank bisect run sh -c 'cd .. && make test'
+
+Sync the bank and then run the command in the syncrepo at each step. The command's exit status marks the step good
+(0), bad (1-127 except 125) or skipped (125), as for git bisect run. Steps that cannot be synced are skipped.
 """,
-    "git": """Example usage:
+    "git": f"""Example usage:
 
-  bank git status --syncfile syncfile.json
-
-Perform git status and list the results on each of the repositories specified in the syncfile.json
-
+  bank git status
   bank git tag release_1.7.0.1
+  bank git log --oneline -3 -- src/
 
-Use the prevailing syncfile and apply the command `git tag release_1.7.0.1` to each of the
-repos in the bank.
+Any git command can be used. Commands other than {", ".join(commands.APPROVED_GIT_COMMANDS)} produce a warning, since
+some (such as rebase --interactive) make no sense run non-interactively in every repo. Arguments are passed to git
+as given, and everything after `--` is passed on without being interpreted by bank.
 """,
-    "gitall": f"""The common git commands which make sense have been "approved" are
-{commands.APPROVED_GIT_COMMANDS}. (Actually any git command can be used but so far only those common git
-commands have been "approved" as making sense in the setting of banksync. Some other git commands definitely do not make
-sense such as `git rebase --interactive` since the bank command is not interactive. Command completion on the command
-line only works for the common commands.
+    "gitall": """Like `bank git`, but also performs the command in the syncrepo. Example usage:
 
-Example usage:
-
-  bank gitall status --syncfile syncfile.json
-
-Perform git status and list the results on each of the repositories specified in the syncfile.json
-and in addition to the actual repo containing the sync file (the syncrepo)
-
-  bank gitall tag release_1.7.0.1
-
-Use the prevailing syncfile and apply the command `git tag release_1.7.0.1` to each of the
-repos in the bank and in addition to the actual repo containing the sync file (the syncrepo).
+  bank gitall checkout master
+  bank gitall fetch --prune
 """,
 }
 
@@ -195,7 +188,7 @@ def complete_git_command(**_: object) -> list[str]:
 def build_parser() -> argparse.ArgumentParser:
     # allow_abbrev=False everywhere: otherwise `bank git log --color` would be taken as an abbreviation of --colorize.
     syncfile_options = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
-    syncfile_options.add_argument("--syncfile", metavar="SYNCFILE", help="the path to the syncfile")
+    syncfile_options.add_argument("--syncfile", metavar="SYNCFILE", help="the path to the syncfile (by default it is found from the current directory)")
 
     common_options = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
     common_options.add_argument(
@@ -203,10 +196,10 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="NUM",
         type=int,
         choices=VERBOSITY_VALUES,
-        help="Specify the level of reported feedback / detail. Acceptable values: 1 (minimal feedback), 2 (some feedback) , 3 (detailed feedback), or 4 (full feedback)",
+        help="how much to report: 0 (only errors), 1 (the overall result), 2 (a line per repo, the default), 3 (also the git commands run), 4 (also git queries)",
     )
-    common_options.add_argument("--colorize", metavar="BOOL", choices=COLORIZE_VALUES, help=f"Colorize the output: {list(COLORIZE_VALUES)}")
-    common_options.add_argument("--dryrun", action="store_true", help="Print what would happen instead of performing the command")
+    common_options.add_argument("--colorize", metavar="WHEN", choices=COLORIZE_VALUES, help="color the output: auto (on a terminal unless NO_COLOR is set, the default), yes or no")
+    common_options.add_argument("--dryrun", action="store_true", help="print what would happen instead of performing the command")
 
     parser = argparse.ArgumentParser(
         prog="bank",
@@ -219,7 +212,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--version",
         action="version",
         version=f"banksync {__version__}. Author: Jason F Harris.\nhttps://github.com/jasonfharris/banksync",
-        help="Show the version number of the banksync tool and exit",
+        help="show the version number of banksync and exit",
     )
     subparsers = parser.add_subparsers(title="commands", dest="command", metavar="", required=True)
 
@@ -235,8 +228,8 @@ def build_parser() -> argparse.ArgumentParser:
         )
 
     sync = add_command("sync")
-    sync.add_argument("--matching", metavar="MATCH", choices=MATCHING_VALUES, help=f'specify how we can recognize a revision "match": {list(MATCHING_VALUES)}')
-    sync.add_argument("--syncBranches", metavar="BRANCHES", choices=SYNC_BRANCHES_VALUES, help=f"Sync branches as well: {list(SYNC_BRANCHES_VALUES)}")
+    sync.add_argument("--matching", metavar="MATCH", choices=MATCHING_VALUES, help="how to find each recorded revision: shaOnly, timestamp (sha, then the same timestamp) or closetimestamp (sha, same timestamp, then the closest timestamp; the default)")
+    sync.add_argument("--syncBranches", metavar="WHEN", choices=SYNC_BRANCHES_VALUES, help="whether to create (yes) or create and move (force) the recorded branches to the recorded commits: no (the default), yes or force")
 
     add_command("record_repos")
 
@@ -245,18 +238,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     create_syncrepo = add_command("create_syncrepo", [common_options])
     create_syncrepo.add_argument("repos", metavar="reponame", nargs="+", help="the repos to be included in the bank")
-    create_syncrepo.add_argument("--syncfilename", metavar="NAME", help="specify the name and extension of the syncfile")
-    create_syncrepo.add_argument("--syncreponame", metavar="NAME", help="specify the name of the syncrepo")
+    create_syncrepo.add_argument("--syncfilename", metavar="NAME", help="the file name of the syncfile (default syncfile.json)")
+    create_syncrepo.add_argument("--syncreponame", metavar="PATH", help="the name or path of the syncrepo to create (default syncrepo)")
 
     clone = add_command("clone", [common_options])
-    clone.add_argument("url", metavar="URL", help="the URL of the sync repo")
-    clone.add_argument("name", metavar="NAME", nargs="?", help="the optional name for the repo")
+    clone.add_argument("url", metavar="URL", help="the URL of the syncrepo")
+    clone.add_argument("name", metavar="NAME", nargs="?", help="the directory to create for the bank (default: derived from the URL)")
 
     add_command("populate")
     add_command("status")
 
     bisect = add_command("bisect")
-    bisect.add_argument("bisectcmd", metavar="BISECTCMD", nargs="?", default="log", choices=BISECT_SUBCOMMANDS, help=f"the bisect subcommand one of {BISECT_SUBCOMMANDS}.")
+    bisect.add_argument("bisectcmd", metavar="BISECTCMD", nargs="?", default="log", choices=BISECT_SUBCOMMANDS, help="the git bisect subcommand (default log)")
 
     for name, where in [("git", "on all the repos in the bank"), ("gitall", "on all the repos in the bank including the syncrepo")]:
         git_command = add_command(name)

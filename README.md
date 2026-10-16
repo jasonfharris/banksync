@@ -1,50 +1,60 @@
 ## Purpose
 
-`banksync` is a command line tool that simplifies the use of git commands across a "bank" or "collection" of
-repositories. It enables synchronization of historical configurations throughout the bank of repos.
-Simplistically an example might look like:
+`banksync` is a command line tool, `bank`, that simplifies the use of git commands across a "bank" (a collection) of
+repositories. It records the state of every repository in the bank in a *syncfile*, which lives in its own git repo,
+the *syncrepo*. Each commit of the syncrepo is then a configuration of the whole bank, which you can check out again,
+bisect, or share.
 
-![Diagramtic representation of banksync](documentation/BanksyncFunctioning.png)
+![Diagrammatic representation of banksync](documentation/BanksyncFunctioning.png)
 
 In simplistic terms each commit in the syncrepo corresponds to a configuration or state of the constituent repos.
 
+`bank` is a looser alternative to git submodules: repositories are matched by sha, and if a sha no longer exists
+(for example after a rebase or filter-branch) by commit timestamp, so a bank survives history rewrites that would
+break a submodule.
+
 ## Installation
 
-You can install `banksync` from PyPi with a simple:
+banksync needs Python 3.12 or later and git. Install it from PyPI with:
 
     pip install banksync
 
+This installs the `bank` command (and the same command under the name `banksync`). Tab completion for bash and zsh
+is available through [argcomplete](https://github.com/kislyuk/argcomplete):
+
+    eval "$(register-python-argcomplete bank)"
+
 ## Quick Start
 
-A bank is a collection of repos defined in a *syncfile*. The syncfile typically resides in a *syncrepo*. In this example, we'll use a project called `animals` containing two repos: `repoFish` and `repoBirds`. The project can be placed anywhere, but for simplicity, we'll put it in the user's root directory.
+A bank is a collection of repos defined in a *syncfile*. The syncfile typically resides in a *syncrepo*. In this
+example, we'll use a project called `animals` containing two repos: `repoFish` and `repoBird`. The project can be
+placed anywhere, but for simplicity, we'll put it in the user's home directory.
 
-To quickly clone and populate the example collection of repos, use the following commands:
+To clone and populate the example collection of repos, use the following commands:
 
     cd ~
     bank clone https://github.com/testbank/animalsSyncRepo.git animals
 
-This will git clone the thin syncrepo, which contains the syncfile, and then populate all the constituent repos. The resulting structure will be:
+This git clones the thin syncrepo, which contains the syncfile, and then clones each of the constituent repos and
+checks out the revisions recorded in the syncfile. The resulting structure is:
 
     animals
     ├── repoBird
-    │   └── Bird.txt
+    │   └── Bird.txt
     ├── repoFish
-    │   └── Fish.txt
+    │   └── Fish.txt
     └── syncrepo
         └── syncfile.json
-
-
-Let's walk quickly through what is happening
 
 ### Step-by-step Walkthrough
 
 Let's recreate this quick start process by breaking down the underlying steps.
 
-1. Create a directory `animals`:
+1. Create a directory `animals` (remove the one from the Quick Start first):
 
    ```
    cd ~
-   sudo rm -r animals
+   rm -rf animals
    mkdir animals
    cd animals
    ```
@@ -55,7 +65,8 @@ Let's recreate this quick start process by breaking down the underlying steps.
    git clone https://github.com/testbank/animalsSyncRepo.git syncrepo
    ```
 
-   This clones the thin repo, which records the syncfile over time. It tracks the state of the repos in the bank at different times or stages. The resulting hierarchy is:
+   This clones the thin repo which records the syncfile over time. It tracks the state of the repos in the bank at
+   different times or stages. The resulting hierarchy is:
 
    ```
    animals
@@ -69,299 +80,421 @@ Let's recreate this quick start process by breaking down the underlying steps.
    bank populate
    ```
 
-   The `populate` command clones each of the repos specified in the syncfile, resulting in the following layout:
+   The `populate` command clones each of the repos specified in the syncfile that is not present yet, and then syncs
+   them to the states given in the syncfile, resulting in the following layout:
 
    ```
    animals
    ├── repoBird
-   │   └── Bird.txt
+   │   └── Bird.txt
    ├── repoFish
-   │   └── Fish.txt
+   │   └── Fish.txt
    └── syncrepo
        └── syncfile.json
    ```
 
 ### Issuing Commands
 
-We can now issue commands across the repos in the bank. From the root directory we can execute:
+We can now issue commands across the repos in the bank:
 
     cd ~/animals
     bank git status
 
-Which will execute the status command in each of the repos in the bank. You can issue commands from anywhere
-in the project directory. The bank executable will look for a syncrepo in successive parent directories until it
-finds a syncrepo and it's syncfile. (If the bank executable doesn't find a syncfile the command will fail.) So
+This runs `git status` in each of the repos in the bank. You can issue commands from anywhere in the project
+directory, because `bank` looks for the syncfile in the current directory and then in the subdirectories of each
+parent directory (see [Finding the syncfile](#finding-the-syncfile)). So
 
     cd ~/animals/repoBird
     bank git status
 
-will yield the exact same result as before (since we are still within the same project directory).
+yields exactly the same result as before.
 
-If we want to checkout a previous state across the repos in the project we can do this via (from the syncrepo):
+To check out a previous state across the repos in the project:
 
     cd ~/animals/syncrepo
     git checkout master~2
     bank sync
 
-The last two commands just moved the syncrepo two revisions back, and then synchronized the repos in the bank to the sync file at this earlier time. To get all repos back to the master branch revisions you can simply execute:
+The last two commands moved the syncrepo two revisions back, and then synchronized the repos in the bank to the
+syncfile at that earlier time. To get all repos back to their master branches you can execute:
 
     bank gitall checkout master
 
-Which will do a `git checkout master` on all the repos in the bank including the sync repo.
+which runs `git checkout master` in all the repos in the bank, including the syncrepo.
 
 ## Syncfile
 
-The syncfile specifies which repositories are part of the bank, and what state the repositories should be synchronized to. A typical simple sync file might be the following
+The syncfile specifies which repositories are part of the bank, and which state they should be synchronized to. For
+example:
 
-    more ~/animals/syncrepo/syncfile.json
+    cat ~/animals/syncrepo/syncfile.json
 
-Which yields:
+yields:
 
-```
+```json
 {
-   "configuration": {
-      "createdByBanksyncVersion": "0.9.10",
-      "requiredBanksyncVersion": "0.9.10",
-      "syncfileFormatVersion": "1.0",
-      "relativePathToRepositories": "..",
-      "clone.syncreponame": "syncrepo"
-   },
-   "repositories": {
-      "repoBird" : {
-         "path": "repoBird",
-         "sha": "6bf9d646b2aa224b64fb86cbddb4d7ab0f2e37d3",
-         "UnixTimeStamp": "1480517200",
-         "date": "2016-11-30 15:46:40 +0100",
-         "author": "Jason Harris",
-         "branch": "master",
-         "revisionNumber": "3",
-         "message": "committing eagle",
-         "cloneURL": "https://github.com/testbank/repoBird.git"
-      },
-      "repoFish": {
-         "path": "repoFish",
-         "sha": "a27368bec17373938b1dcf73638945b89b60a9d0",
-         "UnixTimeStamp": "1480517200",
-         "date": "2016-11-30 15:46:40 +0100",
-         "author": "Jason Harris",
-         "branch": "master",
-         "revisionNumber": "3",
-         "message": "committing salmon",
-         "cloneURL": "https://github.com/testbank/repoFish.git"
-      }
-   }
+    "configuration": {
+        "createdByBanksyncVersion": "0.9.10",
+        "requiredBanksyncVersion": "0.9.10",
+        "syncfileFormatVersion": "1.0",
+        "relativePathToRepositories": "..",
+        "clone.syncreponame": "syncrepo"
+    },
+    "repositories": {
+        "repoBird": {
+            "path": "repoBird",
+            "sha": "6bf9d646b2aa224b64fb86cbddb4d7ab0f2e37d3",
+            "UnixTimeStamp": "1480517200",
+            "date": "2016-11-30 15:46:40 +0100",
+            "author": "Jason Harris",
+            "branch": "master",
+            "revisionNumber": "3",
+            "message": "committing eagle",
+            "cloneURL": "https://github.com/testbank/repoBird.git"
+        },
+        "repoFish": {
+            "path": "repoFish",
+            "sha": "a27368bec17373938b1dcf73638945b89b60a9d0",
+            "UnixTimeStamp": "1480517200",
+            "date": "2016-11-30 15:46:40 +0100",
+            "author": "Jason Harris",
+            "branch": "master",
+            "revisionNumber": "3",
+            "message": "committing salmon",
+            "cloneURL": "https://github.com/testbank/repoFish.git"
+        }
+    }
 }
 ```
 
-The syncfile should lie inside a git repo (the syncrepo). Whenever we want to record a configuration of the
-repos we simply alter the syncfile by transcribing the current state of the repos into the syncfile using
-`bank record_repos` with the appropriate options. We then use `git commit` to record this new state /
-configuration in the syncrepo (the syncrepo is a normal git repo).
+The syncfile lies inside a normal git repo, the syncrepo. To record a new configuration of the repos, transcribe
+their current state into the syncfile with `bank record_repos`, and then commit the syncfile.
 
-So let us add some content to repoBird in our example and then commit this change.
+So let us add some content to repoBird in our example and commit this change:
 
-    cd  ~/animals/repoBird
+    cd ~/animals/repoBird
     echo "toucan" >> Bird.txt
     git commit -am "committing toucan"
 
-So now we can update the syncfile with the state of the current repos in the bank (we can issue bank commands
-from anywhere within our project directory):
+Now update the syncfile with the current state of the repos in the bank (bank commands can be issued from anywhere
+within the project directory):
 
     bank record_repos
 
-The contents of our syncfile will now be something like:
+The entry for repoBird in the syncfile now records the new commit, along the lines of:
 
+```json
+        "repoBird": {
+            "path": "repoBird",
+            "sha": "c8fb05947c5161e484104d99f427ec082fb4e85b",
+            "UnixTimeStamp": "1480519159",
+            "date": "2016-11-30 16:19:19 +0100",
+            "author": "Jason Harris",
+            "branch": "master",
+            "revisionNumber": "4",
+            "message": "committing toucan",
+            "cloneURL": "https://github.com/testbank/repoBird.git"
+        },
 ```
 
-{
-   "configuration": {
-      "createdByBanksyncVersion": "0.9.10",
-      "requiredBanksyncVersion": "0.9.10",
-      "syncfileFormatVersion": "1.0",
-      "relativePathToRepositories": "..",
-      "clone.syncreponame": "syncrepo"
-   },
-   "repositories": {
-      "repoBird" : {
-         "path" : "repoBird",
-         "sha" : "c8fb05947c5161e484104d99f427ec082fb4e85b",
-         "UnixTimeStamp" : "1480519159",
-         "date" : "2016-11-30 - 16:19:19",
-         "author" : "Jason Harris",
-         "revisionNumber" : "4",
-         "message" : "committing toucan",
-         "cloneURL" : "https://github.com/testbank/repoBird.git"
-      },
-      "repoFish": {
-         "path": "repoFish",
-         "sha": "a27368bec17373938b1dcf73638945b89b60a9d0",
-         "UnixTimeStamp": "1480517200",
-         "date": "2016-11-30 15:46:40 +0100",
-         "author": "Jason Harris",
-         "branch": "master",
-         "revisionNumber": "3",
-         "message": "committing salmon",
-         "cloneURL": "https://github.com/testbank/repoFish.git"
-      }
-   }
-}
-```
+Record this new overall state of the bank by committing the syncfile in the syncrepo:
 
-(Note the sha, timestamps, and other data about the state of the repo `repoBird` has changed.)
+    cd ~/animals/syncrepo
+    git commit -am "recording the latest state of the repos in animals"
 
-So we could now record this new overall state of the repos in the bank via simply committing the file syncfile in the syncrepo.
+### Repository entries
 
-    git commit -am "recording the latest state of the repos in animals."
+For each repository, `record_repos`, `create_syncfile` and `create_syncrepo` record:
+
+| Key | Meaning |
+|---|---|
+| `path` | where the repository is, relative to the syncrepo plus `relativePathToRepositories` (or an absolute path) |
+| `sha` | the commit that is checked out |
+| `UnixTimeStamp` | the author timestamp of that commit, used when the sha cannot be found |
+| `date`, `author`, `message` | the commit's author date, author and message, for information |
+| `branch` | the branch that was checked out, or `HEAD` if it was detached |
+| `revisionNumber` | the number of first-parent commits up to the commit, for information |
+| `cloneURL` | the URL of the `origin` remote (or of the first remote), used by `populate` and `clone` |
+
+`sync` only uses `path`, `sha`, `UnixTimeStamp` and `branch`. You can add your own keys to an entry, for example
+notes about a release; `record_repos` keeps them.
+
+### Configuration entries
+
+| Key | Meaning |
+|---|---|
+| `createdByBanksyncVersion` | the version of banksync that created the syncfile |
+| `requiredBanksyncVersion` | the oldest banksync that can use the syncfile; older versions refuse it |
+| `syncfileFormatVersion` | the version of the syncfile format |
+| `relativePathToRepositories` | the path from the syncrepo to the directory that the repository paths are relative to |
+| `clone.syncreponame` | the directory, inside the project, that `bank clone` puts the syncrepo in |
+| `general.*`, `sync.*` | defaults for the options of the commands that use this syncfile (see [Options](#options)) |
+
+Syncfiles created by banksync 0.9.9 and earlier have no `configuration` section and consist of just the
+repositories. They are still supported, with repository paths relative to the parent of the syncrepo.
 
 ## Locations
 
-How does the bank command determine the locations for `repoBird` and `repoFish`, as well as the appropriate
-syncfile to use? The paths are stored in the syncfile itself (along with other information). So all the paths
-are relative to the syncfile.
+How does `bank` determine the locations of `repoBird` and `repoFish`? The paths are stored in the syncfile itself and
+are relative to the syncrepo, offset by `relativePathToRepositories`.
 
-The `relativePathToRepositories` configuration option indicates the relative path where repo commands should
-be executed. In this case, it is one level above our current working directory. Given that the syncfile is
-located in `~/animals/syncrepo`, this means that the repo paths will originate from `~/animals/`. For example,
-the path for the "birds" repo in the syncfile is simply `repoBird`. Relative to `animals/syncrepo`, and considering
-the `relativePathToRepositories` of `..`, we can determine the repo path for "birds". This is calculated as
-`animals/syncrepo` + `..` + `repoBird`, resulting in `animals/repoBird`, which is the storage location for the
-"birds" repo.
+In the example the syncfile is in `~/animals/syncrepo` and `relativePathToRepositories` is `..`, so the repo paths
+start from `~/animals`. The path for repoBird in the syncfile is simply `repoBird`, so the repo is at
+`~/animals/syncrepo` + `..` + `repoBird`, which is `~/animals/repoBird`.
 
-The layout of the constituent repos can be nested, or be side by side, or in any combination or relative location. Paths are typically relative but can be absolute.
+The constituent repos can be nested, side by side, or in any combination of relative locations. Paths are typically
+relative but can be absolute. `create_syncfile` and `create_syncrepo` make the paths relative to the deepest
+directory that contains all the repos given with relative paths, and store absolute paths for repos given with
+absolute paths.
 
-Note if we wanted to we could have used a different name for the syncrepo and indeed a different name for the
-syncfile. We could have called the syncfile `earthanimals.json` if we wanted to.
+You can use a different name for the syncrepo and for the syncfile: the syncfile could be called
+`earthanimals.json`.
 
-## Bank command line options
+### Finding the syncfile
 
-The command line tool `bank` has several options which can be specified:
+Commands that use a syncfile find it as follows:
 
-#### --syncfile <path>
+1. The syncfile given with `--syncfile`.
+2. Otherwise, a syncfile in the current directory, if the current directory is the top of a git repo.
+3. Otherwise, a syncfile in a git repo directly inside the current directory or directly inside any of its parent
+   directories, searching from the current directory upwards. Subdirectories are tried in alphabetical order.
 
-The `syncfile` option specifies a syncfile. The syncfile contents specify which repos are part of the bank.
-The various keys which are recorded if present are:`path`, `sha`, `UnixTimeStamp`, `date`, `author`,
-`revisionNumber`, `message`, `branch`, and `cloneURL`. Adding other keys at present will not effect or change
-the behavior of the bank tool so you can add other info as you see fit / want to each of the recorded states
-in the various repos.
+A `.json` file counts as a syncfile if its `configuration` section has a `requiredBanksyncVersion`, or if it is an
+old style syncfile. If a syncfile needs a newer version of banksync than the one running, `bank` stops and says so.
+
+## Options
+
+Options can be given on the command line, in `~/.bankconfigrc`, or in the `configuration` section of a syncfile.
+For each option the command line wins over the syncfile, which wins over `~/.bankconfigrc`, which wins over the
+default.
+
+| Command line | Config key | Values | Default | Applies to |
+|---|---|---|---|---|
+| `--syncfile PATH` | | a path | found automatically | commands that use a syncfile, and `create_syncfile` |
+| `--dryrun` | | | off | all commands |
+| `--verbosity N` | `general.verbosity` | `0` to `4` | `2` | all commands |
+| `--colorize WHEN` | `general.colorize` | `auto`, `yes`, `no` | `auto` | all commands |
+| | `general.separator` | a character | a space | `git`, `gitall` |
+| `--matching MATCH` | `sync.matching` | `shaOnly`, `timestamp`, `closetimestamp` | `closetimestamp` | `sync`; the config key also applies to the syncs done by `populate`, `clone` and `bisect` |
+| `--syncBranches WHEN` | `sync.syncBranches` | `no`, `yes`, `force` | `no` | `sync`; the config key also applies to the syncs done by `populate`, `clone` and `bisect` |
+| `--syncreponame NAME` | `create_syncrepo.syncreponame` | a path | `syncrepo` | `create_syncrepo` |
+| `--syncfilename NAME` | `create_syncrepo.syncfilename` | a file name | `syncfile.json` | `create_syncrepo` |
+
+Options go after the command, e.g. `bank sync --matching timestamp`. A syncfile can only set `general.*` and `sync.*`
+options.
 
 #### --dryrun
 
-If this option is specified then `banksync` will report what it *would* do but it doesn't actually do anything.
+Report what `bank` *would* do without changing anything.
 
-#### --colorize <bool>
+#### --verbosity
 
-You can specify if color is not to be used in output if for instance you want the logs to be parsed in jenkins or other devops tools. (The default is `True`, i.e. colorize the output of the bank command)
+How much `bank` reports: `0` only errors that stop a command, `1` also the overall result, `2` one line per repository (the default),
+`3` also the git commands that change repositories and their output, `4` also the read-only git queries.
 
-#### --verbosity <num>
+#### --colorize
 
-You can specify how much information banksync reports. This integer should be between 0, 1, 2, 3, or 4. The higher the number the more verbose is the reporting. The default is 2.
+Whether to color the output. `auto` colors it when the output goes to a terminal and the `NO_COLOR` environment
+variable is not set, so logs parsed by Jenkins or other CI tools stay plain.
 
-#### --matching <type>
+#### --matching
 
-When attempting to sync the constituent repos to the versions specified in the syncfile, how do we determine what to set the versions to? We want some loose coupling in that for instance if someone runs filter branch on a project or they do some rebase very early on in the history then the shas will change on all the revisions in the repository. So instead of finding a commit via a sha we will have to fall back to looking for a matching timestamp for the revision. These are generally fairly unique in a project unless a lot of cherrypicking has gone on. If we don't find that exact timestamp then we could fall back to the closest matching revision to that timestamp. In this way at least we have some hope of getting close to the configuration at the time instead of just giving up. Ie we get to the exact configuration if it is available but if not get as close as we can. The value of the option can be:
+When syncing the repos to the versions in the syncfile, how is a revision matched? If someone runs filter-branch on a
+project, or rebases very early in its history, the shas of all the later commits change. So instead of giving up
+when the sha is not found, `bank` can fall back to looking for a commit with the same timestamp, which is preserved
+by such history rewrites and is generally unique within a project unless a lot of cherry-picking has gone on. If no
+commit has that exact timestamp, it can fall back to the commit with the closest timestamp, which at least gets close
+to the configuration at the time instead of giving up. The values are:
 
-- **shaOnly**: if we can't find the exact same revision given by the sha in the syncfile than give up.
-- **timestamps**: try matching by sha first but if that fails find the first revision with the same unix timestamp. (This is almost always preserved across repo manipulation)
-- **closetimestamps**: try matching by sha first, if that fails try matching by timestamp. and if that fails find the revision with the closest timestamp and match to that.
+- **shaOnly**: if the commit given by the sha cannot be checked out, give up.
+- **timestamp**: try the sha first; if that fails, check out the commit with the same Unix timestamp.
+- **closetimestamp**: try the sha, then the same timestamp, and if that fails check out the commit with the closest
+  timestamp (with a warning).
 
-## Options in the sync file
+#### --syncBranches
 
-The sync file itself contains a 'configuration' section where you can specify prevailing options. So the above example would become:
+By default `sync` checks out the recorded branch if it already points at the recorded commit, and otherwise checks out
+the commit with a detached HEAD. With `--syncBranches yes` the recorded branch is also created at the recorded commit
+if it does not exist. With `--syncBranches force` the branch is created or moved to the recorded commit even if it
+already points elsewhere; be aware that this can leave commits on that branch unreferenced.
+
+### ~/.bankconfigrc
+
+An INI file with a section for each group of options, for example:
+
+```ini
+[general]
+verbosity = 1
+colorize = no
+
+[sync]
+matching = timestamp
+```
+
+### Options in the syncfile
+
+The same options, written as `section.key`, can be added to the `configuration` section of a syncfile to set the
+defaults for everyone who uses that bank:
+
+```json
+    "configuration": {
+        "createdByBanksyncVersion": "0.9.10",
+        "requiredBanksyncVersion": "0.9.10",
+        "syncfileFormatVersion": "1.0",
+        "relativePathToRepositories": "..",
+        "clone.syncreponame": "syncrepo",
+        "sync.matching": "shaOnly"
+    },
+```
 
 ## Commands
 
-The form of a bank command is `bank <cmd> <opts>` where `<cmd>` is one of `sync`, `record_repos`, `create_syncfile`, `bisect`, `populate`,  `git` or `gitall` 
+The form of a bank command is `bank <command> <options>`, where `<command>` is one of `sync`, `record_repos`,
+`create_syncfile`, `create_syncrepo`, `clone`, `populate`, `status`, `bisect`, `git` or `gitall`. `bank --help`
+lists them and `bank <command> --help` describes each one. `bank --version` shows the version.
 
-#### bank sync <opts>
+#### bank sync
 
-`sync` will update / checkout the revisions specified in the prevaling syncfile for each of the repos specified in the bank.
+`sync` checks out, in each of the repos in the bank, the revision given in the syncfile.
 
     bank sync
 
-This would find the prevaling syncfile, and then checkout / update the repos given in the prevailing syncfile to the states given in the syncfile. For each repo it tries to checkout the version first by the given sha, and then it falls back to the given timestamp, and then it falls back to the closest timestamp. (This fallback behavior can be controlled by the `--matching` option.)
-
-    bank sync --syncfile syncfile.json
-
-This would use the specificed syncfile `syncfile.json` to the states given in the syncfile. For each repo it tries to checkout the version first by the given sha, and then it falls back to the given timestamp, and then it falls back to the closest timestamp. (This fallback behavior can be controlled by the `--matching` option.)
+finds the syncfile and checks out the states it gives. For each repo it first tries the recorded sha, then the
+recorded timestamp, and then the closest timestamp. (This fallback behavior is controlled by `--matching`, and how
+branches are handled by `--syncBranches`.)
 
     bank sync --syncfile other/dir/syncfile.json
 
-This would use the specificed syncfile `other/dir/syncfile.json` as the syncfile. All the repos are then located relative to the
-syncfile repo (the parent directory to the syncfile).
+uses the syncfile `other/dir/syncfile.json`. The repos are located relative to its syncrepo `other/dir`, offset by
+`relativePathToRepositories`.
 
-#### bank record_repos <opts>
+#### bank record_repos
 
-`record_repos` is used to transcribe the current state of the repos into the syncfile. Eg:
+`record_repos` transcribes the current state of the repos into the syncfile:
 
     bank record_repos
 
-This would alter the contents of the syncfile and change the revisions stored in the syncfile.json to match the current revisions of the referenced repositories.
+changes the entries in the syncfile to match the commits currently checked out in the repositories. Commit the
+syncfile afterwards to record this configuration in the syncrepo.
 
-    bank record_repos --syncfile other/dir/syncfile.json
+#### bank create_syncfile
 
-This would use the specificed syncfile `other/dir/syncfile.json` as the syncfile. All the repos are then located relative to the
-syncfile repo (the parent directory to the syncfile).
-
-#### bank create_syncfile <opts>
-
-`create_syncfile` is used to generate an initial syncfile. Eg:
+`create_syncfile` creates an initial syncfile:
 
     bank create_syncfile --syncfile syncfile.json repo1 repo2 ... repoN
 
-This would generate or overwrite the syncfile.json to contain sync points for the current states of `repo1`, `repo2`, ... `repoN`
+creates or overwrites `syncfile.json` in the current directory, recording the current states of `repo1`, `repo2`, ...
+`repoN`.
 
-    bank create_syncfile --syncfile other/dir/syncfile.json some/path/repo1 another/path/repo2 ... other/path/repoN
+    bank create_syncfile --syncfile other/dir/syncfile.json some/path/repo1 another/path/repo2
 
-This would generate or overwrite the syncfile at `other/dir/syncfile.json` to point to the specified repos.
+creates or overwrites the syncfile at `other/dir/syncfile.json`. The directory containing the syncfile must already
+be the top of a git repo (the syncrepo); use `create_syncrepo` to create both at once. The repos must have distinct
+directory names, since those become their names in the syncfile. If the state of any repo cannot be recorded, no
+syncfile is written.
 
-#### bank create_syncrepo <opts>
+#### bank create_syncrepo
 
-`create_syncrepo` is used to generate the syncrepo directory, initialize a git repository there, and create the syncfile. Basically it creates all the working parts of a syncrepo. Eg:
+`create_syncrepo` creates the syncrepo directory, initializes a git repository there, and creates the syncfile in it:
 
     bank create_syncrepo repo1 repo2 ... repoN
 
-This would create the directory `syncrepo` and fill it with a `syncfile.json`. The syncfile would contain the latest states of the `repo1`, `repo2`, ... `repoN`. 
+creates the directory `syncrepo` containing a `syncfile.json` that records the current states of `repo1`, `repo2`,
+... `repoN`.
 
     bank create_syncrepo --syncreponame controlrepo --syncfilename felipe.json repo1 repo2 ... repoN
 
-Would create and initialize a syncrepo called `controlrepo` and inside that a syncfile called `felipe.json`.
+creates and initializes a syncrepo called `controlrepo` with a syncfile called `felipe.json` inside it. The syncrepo
+can also be put elsewhere, e.g. `--syncreponame some/path/controlrepo`, and the syncfile name can be given as a path
+inside it, e.g. `--syncfilename some/path/controlrepo/felipe.json`. The directory must not exist yet. The syncfile is
+not committed; review it and commit it yourself.
 
-#### bank bisect <opts>
+#### bank clone
 
-You can use `bank bisect` on the syncrepo to step through historic configurations looking for a configuration which produces some change. (Typically we are searching for a regression.) Eg if we have a configuration file in the syncrepo the following might be a typical bisect session:
+`clone` sets up a bank from the URL of its syncrepo:
 
-    cd SomeSyncRepo
+    bank clone https://github.com/testbank/animalsSyncRepo.git animals
+
+creates the directory `animals`, clones the syncrepo into `animals/syncrepo` (or the directory given by the
+syncfile's `clone.syncreponame`), and then populates the bank as `bank populate` does. Without a name the directory
+is named after the URL, with any `SyncRepo` / `_sync_repo` suffix removed: `animals` here. The directory must not
+exist or must be empty.
+
+#### bank populate
+
+`populate` clones each repository in the syncfile that is not present yet, from its `cloneURL`, and then syncs the
+bank:
+
+    bank populate
+
+Repositories that are already present are left as they are, so `populate` can be rerun after a failure or after
+repositories are added to the syncfile.
+
+#### bank status
+
+`status` reports the branch of each repository and how many files are modified or staged:
+
+    bank status
+
+#### bank bisect
+
+`bank bisect` runs `git bisect` on the syncrepo to step through the historic configurations of the bank, looking for
+the configuration that introduced some change (typically a regression). Whenever a bisect step checks out a different
+version of the syncfile, the bank is synced to it. A typical bisect session:
+
     bank bisect start
     bank bisect good 12e4f5
     bank bisect bad master
     <do build / test>
-    bank bisect good 78a6b9
+    bank bisect good
     <do build / test>
-    bank bisect bad ae726a
+    bank bisect bad
     ...
+    bank bisect reset
 
-Basically we are git bisecting on the syncrepo, and after each bisect step we get a new configuration, then `bank sync` will be run to synchronize the repositories in the bank to their state at the time that iteration of the syncfile was recorded . So `bank bisect <arguments>` is basically equivalent to `git bisect <arguments>; bank sync`
+`bank bisect start` records the branch (or commit) each repo has checked out, and `bank bisect reset` checks those out
+again after the syncrepo has been reset. Other arguments are passed to `git bisect` as given.
 
-#### Dispatching git commands
+`bank bisect run` automates the session: at each step it syncs the bank and then runs the given command in the
+syncrepo, which reports good (exit status 0), bad (1 to 127, except 125) or skip (125) as for `git bisect run`. A step
+whose bank cannot be synced is skipped.
 
-We can use `bank` to perform a git command on each repository in the bank. All git commands have the prefix 'git' along with the normal name of the git command. Eg
+    bank bisect start master v1.0
+    bank bisect run sh -c 'cd .. && make test'
+    bank bisect reset
 
-    bank git status --syncfile syncfile.json
+#### bank git and bank gitall
 
-Will perform a `git status` operation on each of the repositories in the bank and print the results to stdout.
+`bank git` runs a git command in each repository in the bank:
 
-If you use `gitall` instead of `git` command, then the git command will also be run in the syncrepo.
+    bank git status
+    bank git tag release_1.7.0.1
+    bank git log --oneline -3 -- src/
 
-    bank gitall status --syncfile syncfile.json
+`bank gitall` does the same and also runs the command in the syncrepo:
 
-Will perform a `git status` operation on each of the repositories in the bank and print the results to stdout.
+    bank gitall checkout master
 
-## Testing
+Any git command can be used, but some make no sense run non-interactively across a bank (`git rebase --interactive`,
+for example), so `bank` warns about commands outside a list of common ones: status, log, show, diff, branch, tag,
+checkout, switch, restore, reset, commit, stash, fetch, pull, push, remote, describe, rev-parse, grep, prune, gc,
+fsck, ls-files, ls-remote and ls-tree. Arguments are passed to git exactly as given, and everything after a `--` is
+passed on without being interpreted by `bank`, so `bank git checkout -- file.txt` works as expected.
 
-banksync requires Python 3.12 or later. To run the test suite, install the package in editable mode with the
-development extras and run pytest from the package directory:
+`bank git pull` without arguments in a repo with a detached HEAD (as after a sync) pulls the remote's default branch,
+since a bare `git pull` has no branch to pull into.
+
+## Development
+
+Install the package in editable mode with the development extras, then run the tests and the type checker:
 
     cd banksync_Package
     python3 -m venv .venv
     .venv/bin/pip install -e '.[dev]'
     .venv/bin/python -m pytest
+    .venv/bin/mypy
+
+The tests build their repositories in temporary directories and need no network access. The one test that clones the
+Quick Start example from GitHub is skipped unless `BANKSYNC_NETWORK_TESTS=1` is set.
+
+`python -m banksync` runs the code in a checkout without installing it.

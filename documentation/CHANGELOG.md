@@ -1,3 +1,49 @@
+# Unreleased
+
+Not released to PyPI yet, together with the changes listed under 0.9.11 below. `__version__` is still 0.9.10.
+
+Before releasing, set `__version__` and `REQUIRED_BANKSYNC_VERSION` in banksync/version.py to the new version. Since
+0.9.11 syncfiles have a `configuration` section, which banksync 0.9.10 cannot read, but they are still stamped
+`"requiredBanksyncVersion": "0.9.10"`.
+
+Requirements and packaging:
+
+- Python 3.12 or later. Packaging is in pyproject.toml; setup.py, setup.cfg and the bin/ launcher scripts are gone, and
+  `bank` / `banksync` are console-script entry points. `python -m banksync` runs a checkout without installing it.
+- The sysexecute dependency is removed. Commands run through banksync/shell.py, which passes arguments to git without a
+  shell or format-string substitution, so arguments such as `HEAD@{0}`, `@{u}`, quotes and spaces reach git unchanged.
+- The code is split into typed modules (console, shell, git, syncfile, options, commands) and is `mypy --strict` clean.
+
+Behaviour:
+
+- Options can be set in the syncfile's `configuration` section (`"sync.matching": "timestamp"`, ...) and in
+  `~/.bankconfigrc`, which was never actually read before. Command line > syncfile > ~/.bankconfigrc > defaults.
+- `--colorize` takes `auto` (the new default: color only on a terminal and when NO_COLOR is unset), `yes` or `no`.
+- `bank clone` honours `clone.syncreponame` and finds syncfiles with any name. `bank populate` skips repos that are
+  already present, so it can be rerun.
+- `bank bisect run <cmd>` syncs the bank before running the command at each step. `bisect reset` reports repos it could
+  not restore and exits 1. The bisect state is kept in the syncrepo's .git directory instead of a `.bisectRestore` file.
+- `bank git` accepts any git command (with a warning outside the common ones), passes `--` and anything after it
+  through, and no longer mistakes git options such as `--color` for abbreviations of bank's own options.
+- `create_syncfile` does not write incomplete syncfiles and rejects two repos with the same name. `create_syncrepo`
+  accepts `--syncfilename path/inside/the/syncrepo.json` and cleans up after a failure.
+- `record_repos` keeps keys it does not write itself, records commit messages verbatim, and records the URL of the
+  first remote when there is no origin (it used to record the remote's name).
+- Syncfiles given with `--syncfile` are checked against `requiredBanksyncVersion` too.
+- Also not listed under 0.9.11: `bank sync --syncBranches no|yes|force`, support for git worktrees as repos and
+  syncrepos, and `bank git pull` on a detached HEAD pulling the remote's default branch.
+
+Documentation:
+
+- The README and `--help` texts describe the current behaviour: correct `--matching` and `--colorize` values, the
+  `status`, `clone` and `create_syncrepo` commands, option files, syncfile keys, and how the syncfile is found.
+
+Testing:
+
+- The doctests are replaced by a pytest suite that works in temporary directories with local remotes and fixed commit
+  dates, so it neither touches the checkout nor needs the network (except one opt-in test).
+
+
 # 0.9.11
 
 Changes made in 0.9.11 can be summarized as follows:

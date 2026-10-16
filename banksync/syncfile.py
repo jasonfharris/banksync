@@ -31,6 +31,7 @@ from . import git
 from .console import console
 from .git import RepoInfo
 from .util import BanksyncError, version_less_or_equal
+from .version import __version__
 
 LEGACY_RELATIVE_PATH_TO_REPOSITORIES = ".."
 
@@ -49,7 +50,8 @@ class SyncFile:
         except (OSError, ValueError) as error:
             raise BanksyncError(f"failure! could not read the sync file at {path}: {error}") from error
         if not data or not isinstance(data, dict):
-            raise BanksyncError(f"failure! no repos where specified in the sync file at {path}.")
+            raise BanksyncError(f"failure! no repos were specified in the sync file at {path}.")
+        check_required_version(path, data, __version__)
         return cls(path, data)
 
     @property
@@ -130,6 +132,22 @@ def check_repo(label: str, repo: Path) -> bool:
 # ----- finding the syncfile -----
 
 
+def check_required_version(path: Path, data: dict[str, Any], current_version: str) -> None:
+    """Raise BanksyncError if the syncfile needs a newer version of banksync than `current_version`."""
+    configuration = data.get("configuration")
+    if not isinstance(configuration, dict) or "requiredBanksyncVersion" not in configuration:
+        return
+    required = str(configuration["requiredBanksyncVersion"])
+    if version_less_or_equal(required, current_version):
+        return
+    created = configuration.get("createdByBanksyncVersion", "unknown")
+    raise BanksyncError(
+        f"failure! The syncfile {path} was created with banksync version {created} and needs at least banksync"
+        f" version {required}, but you are running banksync version {current_version}. Please upgrade banksync to"
+        f" at least version {required} to use this file."
+    )
+
+
 def is_syncfile(path: Path, current_version: str) -> bool:
     """Whether `path` is a JSON syncfile this version of banksync can use.
 
@@ -144,15 +162,8 @@ def is_syncfile(path: Path, current_version: str) -> bool:
 
     configuration = data.get("configuration")
     if isinstance(configuration, dict) and "requiredBanksyncVersion" in configuration:
-        required = str(configuration["requiredBanksyncVersion"])
-        if version_less_or_equal(required, current_version):
-            return True
-        created = configuration.get("createdByBanksyncVersion", "unknown")
-        raise BanksyncError(
-            f"Warning: The syncfile {path} was created with banksync version {created} and it needs at least banksync"
-            f" version {required} to work with this file, but you are running banksync version {current_version}."
-            f" Please upgrade your version of banksync to at least version {required} to use this file."
-        )
+        check_required_version(path, data, current_version)
+        return True
 
     # An old style syncfile: a mapping from repo names to repo entries.
     return bool(data) and all(isinstance(value, dict) and "UnixTimeStamp" in value for value in data.values())
