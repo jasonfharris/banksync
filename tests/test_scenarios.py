@@ -375,8 +375,7 @@ def test_bisect_reset_reports_repos_it_could_not_restore(animals: Animals) -> No
 
 
 def test_bisect_run_syncs_the_bank_before_each_step(animals: Animals) -> None:
-    ws = animals.ws
-    sp1, sp2, sp3 = animals.sync_points
+    sp1, _, sp3 = animals.sync_points
     animals.bank("explicit", "bisect", "start", sp3, sp1)
 
     # The step command runs in the syncrepo; it fails ("bad") once repoFish contains salmon.
@@ -407,7 +406,6 @@ def test_record_repos_keeps_keys_banksync_does_not_write(animals: Animals) -> No
 
 
 def test_git_accepts_any_git_command_and_passes_options_and_double_dash_through(animals: Animals) -> None:
-    ws = animals.ws
     # `--color` is not taken as an abbreviation of bank's --colorize.
     output = animals.bank("explicit", "git", "log", "-1", "--color=never", "--format=%s")
     assert "committing salmon" in output and "committing eagle" in output
