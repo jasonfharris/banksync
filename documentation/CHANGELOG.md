@@ -1,10 +1,7 @@
-# Unreleased
+# 0.9.11 (26 Nov 2026)
 
-Not released to PyPI yet, together with the changes listed under 0.9.11 below. `__version__` is still 0.9.10.
-
-Before releasing, set `__version__` and `REQUIRED_BANKSYNC_VERSION` in banksync/version.py to the new version. Since
-0.9.11 syncfiles have a `configuration` section, which banksync 0.9.10 cannot read, but they are still stamped
-`"requiredBanksyncVersion": "0.9.10"`.
+The first release since 0.9.10. Syncfiles written by 0.9.11 have a `configuration` section, which banksync 0.9.10
+cannot read, so they are stamped `"requiredBanksyncVersion": "0.9.11"`.
 
 Requirements and packaging:
 
@@ -32,8 +29,8 @@ Behaviour:
 - `record_repos` keeps keys it does not write itself, records commit messages verbatim, and records the URL of the
   first remote when there is no origin (it used to record the remote's name).
 - Syncfiles given with `--syncfile` are checked against `requiredBanksyncVersion` too.
-- Also not listed under 0.9.11: `bank sync --syncBranches no|yes|force`, support for git worktrees as repos and
-  syncrepos, and `bank git pull` on a detached HEAD pulling the remote's default branch.
+- `bank sync --syncBranches no|yes|force`, support for git worktrees as repos and syncrepos, and `bank git pull` on a
+  detached HEAD pulling the remote's default branch.
 
 Documentation:
 
@@ -46,9 +43,7 @@ Testing:
   dates, so it neither touches the checkout nor needs the network (except one opt-in test).
 
 
-# 0.9.11
-
-Changes made in 0.9.11 can be summarized as follows:
+Earlier changes in 0.9.11, made before the rewrite above:
 
 Code files:
 

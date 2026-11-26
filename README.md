@@ -134,8 +134,8 @@ yields:
 ```json
 {
     "configuration": {
-        "createdByBanksyncVersion": "0.9.10",
-        "requiredBanksyncVersion": "0.9.10",
+        "createdByBanksyncVersion": "0.9.11",
+        "requiredBanksyncVersion": "0.9.11",
         "syncfileFormatVersion": "1.0",
         "relativePathToRepositories": "..",
         "clone.syncreponame": "syncrepo"
@@ -338,8 +338,8 @@ defaults for everyone who uses that bank:
 
 ```json
     "configuration": {
-        "createdByBanksyncVersion": "0.9.10",
-        "requiredBanksyncVersion": "0.9.10",
+        "createdByBanksyncVersion": "0.9.11",
+        "requiredBanksyncVersion": "0.9.11",
         "syncfileFormatVersion": "1.0",
         "relativePathToRepositories": "..",
         "clone.syncreponame": "syncrepo",
